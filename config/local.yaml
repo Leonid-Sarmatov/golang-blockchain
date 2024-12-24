@@ -1,0 +1,10 @@
+postgres:
+  host: "blockchain_postgres" #"last_fight_postgres"
+  port: "5432"
+  user: "leonid"
+  password: "password"
+  dbname: "blockchain"
+http_server:
+  address: ":8082" # Адрес сервера
+  request_timeout: 4s # Таймаут запроса
+  connection_timeout: 60s # Таймаут соединения
