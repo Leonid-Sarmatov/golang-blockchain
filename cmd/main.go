@@ -1,7 +1,12 @@
 package main
 
 import (
-	"golang_blockchain/pkg/blockchain"
+	"fmt"
+	"log"
+	"strconv"
+
+	"golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/boltdb"
 	proofofwork "golang_blockchain/pkg/proof_of_work"
 )
 
@@ -10,8 +15,26 @@ func main() {
 	spw := proofofwork.NewProofOfWork()
 
 	// Создаем генезис
-	genesis := blockchain.NewGenesisBlock(spw)
+	genesis := block.NewGenesisBlock(spw)
 
 	// Добавляем блок для генезиса
-	blockchain.NewBlock("Hello, blockchain!", genesis.Hash, spw)
+	block.NewBlock("Hello, blockchain!", genesis.Hash, spw)
+
+	// Создаем подключение к базе данных
+	c := boltdb.NewBBoltDBDriver()
+
+	// Записываем несколько ключей
+	for i := 0; i < 10; i += 1 {
+		c.WriteValue([]byte("MyBacket"), []byte(strconv.Itoa(i)), []byte("pipapupa"+strconv.Itoa(i)))
+	}
+
+	// Печатаем данные
+	for i := 0; i < 10; i += 1 {
+		val, err := c.ReadValue([]byte("MyBacket"), []byte(strconv.Itoa(i)))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Printf("Value = %v\n", string(val))
+	}
 }
