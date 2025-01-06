@@ -2,6 +2,7 @@ package proofofwork
 
 import (
 	"crypto/sha256"
+	"fmt"
 	block "golang_blockchain/pkg/block"
 	"log"
 	"math/big"
@@ -27,7 +28,7 @@ func NewProofOfWork() *SelfProofOfWork {
 Реализует интерфейс проверки работы, в данной
 реализации выполняет всю работу сам
 */
-func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte) {
+func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
 	var hashInt big.Int
 	var hash [32]byte
 	counter := 0
@@ -35,7 +36,11 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte) {
 	log.Printf("Mining the block containing \n%s\n", block.Data)
 	for counter < maxNonce {
 		block.ProofOfWorkValue = counter
-		hash = [32]byte(spw.HashCalculate(block.BlockToBytes()))
+		bytes, err := block.BlockToBytes()
+		if err != nil {
+			return 0, nil, fmt.Errorf("Can not calculate hash from block: %v\n", err)
+		}
+		hash = [32]byte(spw.HashCalculate(bytes))
 		log.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
@@ -47,7 +52,7 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte) {
 	}
 	log.Printf("Counter result value:\n%v\n", counter)
 
-	return counter, hash[:]
+	return counter, hash[:], nil
 }
 
 /*

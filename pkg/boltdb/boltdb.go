@@ -1,10 +1,14 @@
 package boltdb
 
 import (
-	"log"
 	"fmt"
+	"log"
 
 	"go.etcd.io/bbolt"
+)
+
+const (
+	blocksBucketName = "blocks_bucket"
 )
 
 /* Структура драйвера для базы данных */
@@ -16,7 +20,7 @@ type BBoltDBDriver struct {
 func NewBBoltDBDriver() *BBoltDBDriver {
 	var driver BBoltDBDriver
 
-	db, err := bbolt.Open("my.db", 0600, nil)
+	db, err := bbolt.Open("../bolt.db", 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -30,13 +34,15 @@ func (driver *BBoltDBDriver) CloseConnection() {
 	driver.DB.Close()
 }
 
-/* 
-Функция записи значения по ключу в определенную корзину
+/*
+WriteValue Функция записи значения по
+ключу в определенную корзину
+
 	bucketName имя корзины
 	key ключ
 	value данные
 */
-func (driver *BBoltDBDriver)WriteValue(bucketName, key, value []byte) error {
+func (driver *BBoltDBDriver) WriteValue(bucketName, key, value []byte) error {
 	return driver.DB.Update(func(tx *bbolt.Tx) error {
 		// Создаем корзину (bucket)
 		bucket, err := tx.CreateBucketIfNotExists(bucketName)
@@ -54,12 +60,14 @@ func (driver *BBoltDBDriver)WriteValue(bucketName, key, value []byte) error {
 	})
 }
 
-/* 
-Функция чтения значения по ключу из определенной корзину
+/*
+ReadValue Функция чтения значения по ключу из
+определенной корзину
+
 	bucketName имя корзины
 	key ключ
 */
-func (driver *BBoltDBDriver)ReadValue(bucketName, key []byte) ([]byte, error) {
+func (driver *BBoltDBDriver) ReadValue(bucketName, key []byte) ([]byte, error) {
 	value := make([]byte, 0)
 	err := driver.DB.View(func(tx *bbolt.Tx) error {
 		// Получаем корзину (bucket) с именем "MyBucket"
@@ -78,4 +86,18 @@ func (driver *BBoltDBDriver)ReadValue(bucketName, key []byte) ([]byte, error) {
 	})
 
 	return value, err
+}
+
+/*
+Функция чтения значения по ключу из определенной корзину
+
+	bucketName имя корзины
+	key ключ
+*/
+func IsBlockchainExist() (bool, error) {
+	return false, nil
+}
+
+func BlockchainInit() error {
+	return nil
 }

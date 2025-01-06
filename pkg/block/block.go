@@ -2,7 +2,8 @@ package block
 
 import (
 	"bytes"
-	"encoding/binary"
+	"encoding/gob"
+	"fmt"
 	"log"
 	"time"
 )
@@ -20,16 +21,34 @@ type Block struct {
 BlockToBytesBlock преобразует экземпляр
 структуры блока в байтовый слайс
 */
-func (b *Block) BlockToBytes() []byte {
+func (b *Block) BlockToBytes() ([]byte, error) {
 	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
 
-	// Используем библиотеку для работы с бинарными данными
-	binary.Write(&result, binary.LittleEndian, b.TimeOfCreation)
-	result.Write(b.Data)
-	result.Write(b.PrevBlockHash)
-	binary.Write(&result, binary.LittleEndian, int64(b.ProofOfWorkValue))
+	err := encoder.Encode(b)
+	if err != nil {
+		return nil, fmt.Errorf("Convert block to byte slice was failed: %v\n", err)
+	}
 
-	return result.Bytes()
+	return result.Bytes(), nil
+	// // Используем библиотеку для работы с бинарными данными
+	// binary.Write(&result, binary.LittleEndian, b.TimeOfCreation)
+	// result.Write(b.Data)
+	// result.Write(b.PrevBlockHash)
+	// binary.Write(&result, binary.LittleEndian, int64(b.ProofOfWorkValue))
+
+	// return result.Bytes()
+}
+
+/*
+BytesToBlock парсит бинарное представление
+блока в структуру
+
+	clice - бинарные данные
+*/
+func (b *Block) BytesToBlock(clice []byte) error {
+	decoder := gob.NewDecoder(bytes.NewReader(clice))
+	return decoder.Decode(b)
 }
 
 /*
@@ -37,7 +56,7 @@ ProofofWork описывает интерфейс для структур,
 способных подтвердить работу
 */
 type ProofOfWork interface {
-	PWExecute(block *Block) (int, []byte)
+	PWExecute(block *Block) (int, []byte, error)
 }
 
 /*
@@ -47,7 +66,7 @@ NewBlock создает новый блок в блокчейн
 	prewBlochHash - хеш предыдущего блока
 	pw - объект интерфеса для подтверждения работы
 */
-func NewBlock(data string, prewBlochHash []byte, pw ProofOfWork) *Block {
+func NewBlock(data string, prewBlochHash []byte, pw ProofOfWork) (*Block, error) {
 	// Подготавливаем блок
 	block := &Block{
 		TimeOfCreation:   time.Now().Unix(),
@@ -58,11 +77,14 @@ func NewBlock(data string, prewBlochHash []byte, pw ProofOfWork) *Block {
 	}
 
 	// Проверяем работу
-	val, hash := pw.PWExecute(block)
+	val, hash, err := pw.PWExecute(block)
+	if err != nil {
+		return block, fmt.Errorf("Invalid proof-of-work, blok was not create: %v\n", err)
+	}
 	block.ProofOfWorkValue = val
 	block.Hash = hash
 
-	return block
+	return block, nil
 }
 
 /*
