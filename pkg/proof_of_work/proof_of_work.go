@@ -10,7 +10,7 @@ import (
 
 const (
 	maxNonce   = 256 * 65535
-	targetBits = 15
+	targetBits = 12
 )
 
 type SelfProofOfWork struct {
