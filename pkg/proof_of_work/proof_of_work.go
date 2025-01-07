@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	maxNonce   = 65535
-	targetBits = 12
+	maxNonce   = 256 * 65535
+	targetBits = 15
 )
 
 type SelfProofOfWork struct {
@@ -33,7 +33,7 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
 	var hash [32]byte
 	counter := 0
 
-	log.Printf("Mining the block containing \n%s\n", block.Data)
+	log.Printf("Mining the block containing: %s\n", block.Data)
 	for counter < maxNonce {
 		block.ProofOfWorkValue = counter
 		bytes, err := block.BlockToBytes()
@@ -41,7 +41,7 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
 			return 0, nil, fmt.Errorf("Can not calculate hash from block: %v\n", err)
 		}
 		hash = [32]byte(spw.HashCalculate(bytes))
-		log.Printf("\r%x", hash)
+		//log.Printf("\r%x", hash)
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(spw.target) == -1 {
@@ -50,7 +50,7 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
 			counter += 1
 		}
 	}
-	log.Printf("Counter result value:\n%v\n", counter)
+	log.Printf("Counter result value: %v\n", counter)
 
 	return counter, hash[:], nil
 }
