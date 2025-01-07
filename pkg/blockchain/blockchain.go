@@ -3,6 +3,7 @@ package blockchain
 import (
 	"fmt"
 	block "golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/iterator"
 	proofofwork "golang_blockchain/pkg/proof_of_work"
 	"log"
 )
@@ -26,6 +27,8 @@ type BlockchainStorage interface {
 	BlockchainGetTip() ([]byte, error)
 	/* Функция сохраняющая новый блок внутри хранилища */
 	WriteNewBlock(newBlock *block.Block, lastHash []byte) error
+	/* Функция загружающая из хранилища существующий блок по хэшу */
+	GetExistBlockByHash(lastHash []byte) (*block.Block, error)
 }
 
 /* Сама структура блокчейна */
@@ -36,7 +39,13 @@ type Blockchain struct {
 	TipHash  []byte
 }
 
-/* Конструктор */
+/*
+Конструктор. Принимает в себя необходимые компоненты в виде интерфейса
+
+	storage BlockchainStorage - абстрктное хранилище
+	hc block.HashCalculator - абстрактный хеш-генератор
+	pow block.ProofOfWork - абстрактный подтвердитель работы
+*/
 func NewBlockchain(storage BlockchainStorage,
 	hc block.HashCalculator, pow block.ProofOfWork) (*Blockchain, error) {
 	// Подготавливаем структуру
@@ -78,6 +87,11 @@ func NewBlockchain(storage BlockchainStorage,
 	return blockchain, nil
 }
 
+/*
+AddBlockToBlockchain добавляет новый блок в блокчейн
+
+	data полезная нагрузка блока в виде строки
+*/
 func (bc *Blockchain) AddBlockToBlockchain(data string) error {
 	// Получаем кончик блокчейна
 	tip, err := bc.Storage.BlockchainGetTip()
@@ -98,4 +112,66 @@ func (bc *Blockchain) AddBlockToBlockchain(data string) error {
 	log.Printf("Новый блок в блокчейн успешно создан! Хеш последнего блока: %v\n", newBlock.Hash)
 
 	return nil
+}
+
+/*
+Реализует интерфейс IterableCollection, для
+того что бы можно было итерироваться по блокчейну
+*/
+func (bc *Blockchain) CreateIterator() (iterator.Iterator, error) {
+	var iterator blockchainIterator
+
+	tip, err := bc.Storage.BlockchainGetTip()
+	if err != nil {
+		return nil, fmt.Errorf("Can not create iterator: %v", err)
+	}
+
+	iterator.currentHash = tip
+	iterator.blockchain = bc
+
+	return &iterator, nil
+}
+
+/* Структура итератора по блокчейну */
+type blockchainIterator struct {
+	blockchain  *Blockchain
+	currentHash []byte
+}
+
+func (i *blockchainIterator) Next() (interface{}, error) {
+	block, err := i.blockchain.Storage.GetExistBlockByHash(i.currentHash)
+	if err != nil {
+		return nil, fmt.Errorf("Iterator can not load next element: %v", err)
+	}
+
+	block, err = i.blockchain.Storage.GetExistBlockByHash(block.PrevBlockHash)
+	if err != nil {
+		return nil, fmt.Errorf("Iterator can not load next element: %v", err)
+	}
+
+	i.currentHash = block.Hash
+
+	return block, nil
+}
+
+func (i *blockchainIterator) HasNext() (bool, error) {
+	current, err := i.Current()
+	if err != nil {
+		return false, err
+	}
+
+	if current.(*block.Block).ProofOfWorkValue == 0 || len(current.(*block.Block).PrevBlockHash) == 0 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (i *blockchainIterator) Current() (interface{}, error) {
+	block, err := i.blockchain.Storage.GetExistBlockByHash(i.currentHash)
+	if err != nil {
+		return nil, fmt.Errorf("Iterator can not load current element: %v", err)
+	}
+
+	return block, nil
 }

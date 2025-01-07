@@ -27,7 +27,20 @@ func main() {
 	myBlockchain.AddBlockToBlockchain("Пипапупа")
 	myBlockchain.AddBlockToBlockchain("Полиморфин")
 	myBlockchain.AddBlockToBlockchain("Берсеркерум")
-	c.Iterator()
+
+	myIterator, err := myBlockchain.CreateIterator()
+	fmt.Println(err)
+
+	for ok, _ := myIterator.HasNext(); ok; ok, _ = myIterator.HasNext() {
+		currentValue, err := myIterator.Current()
+		if err != nil {
+			break
+		}
+		fmt.Printf("Информация блока: %v\n", string(currentValue.(*block.Block).Data))
+		fmt.Printf("Хэш блока: %v\n", currentValue.(*block.Block).Hash)
+		fmt.Printf("Хэш предыдущего блока: %v\n\n", currentValue.(*block.Block).PrevBlockHash)
+		myIterator.Next()
+	}
 
 	// // Записываем несколько ключей
 	// for i := 0; i < 10; i += 1 {

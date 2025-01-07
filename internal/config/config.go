@@ -46,5 +46,3 @@ func MustLoad() *Config {
 	}
 	return &cfg
 }
-
-// 109.252.91.23

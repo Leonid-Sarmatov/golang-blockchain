@@ -110,7 +110,7 @@ func (driver *BBoltDBDriver) IsBlockchainExist() (bool, error) {
 }
 
 /*
-IsBlockchainExist Функция для удовлетворения
+MakeNewBlockchain Функция для удовлетворения
 интерфейсу BlockchainStorage. Проводит создание
 генезис блока и его загрузку на диск
 */
@@ -147,7 +147,7 @@ func (driver *BBoltDBDriver) MakeNewBlockchain(genesisBlock *block.Block) error 
 }
 
 /*
-IsBlockchainExist Функция для удовлетворения
+BlockchainGetTip Функция для удовлетворения
 интерфейсу BlockchainStorage. Проводит создание
 генезис блока и его загрузку на диск
 */
@@ -157,7 +157,7 @@ func (driver *BBoltDBDriver) BlockchainGetTip() ([]byte, error) {
 }
 
 /*
-IsBlockchainExist Функция для удовлетворения
+WriteNewBlock Функция для удовлетворения
 интерфейсу BlockchainStorage. Сохраняет на диск
 новый блок в блокчейн и обновляет хвостик
 */
@@ -191,6 +191,26 @@ func (driver *BBoltDBDriver) WriteNewBlock(newBlock *block.Block, lastHash []byt
 	})
 
 	return err
+}
+
+/*
+GetExistBlockByHash Функция для удовлетворения
+интерфейсу BlockchainStorage. Вычитывает из базы данныз блок
+и парсит его в используемую структуру
+*/
+func (driver *BBoltDBDriver) GetExistBlockByHash(hash []byte) (*block.Block, error) {
+	var block block.Block
+	data, err := driver.ReadValue([]byte(blocksBucketName), hash)
+	if err != nil {
+		return nil, fmt.Errorf("Can not get block by hash: %v", err)
+	}
+
+	err = block.BytesToBlock(data)
+	if err != nil {
+		return nil, fmt.Errorf("Read block was failed with convert error: %v", err)
+	}
+
+	return &block, nil
 }
 
 /* 
