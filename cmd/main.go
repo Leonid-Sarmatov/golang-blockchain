@@ -12,21 +12,15 @@ func main() {
 	// Создаем проверяльщика работы
 	spw := proofofwork.NewProofOfWork()
 
-	// Создаем генезис
-	genesis := block.NewGenesisBlock(spw)
-
-	// Добавляем блок для генезиса
-	block.NewBlock("Hello, blockchain!", genesis.Hash, spw)
-
 	// Создаем подключение к базе данных
 	c := boltdb.NewBBoltDBDriver()
 
 	myBlockchain, err := blockchain.NewBlockchain(c, spw, spw)
 	fmt.Println(err)
 
-	myBlockchain.AddBlockToBlockchain("Пипапупа")
-	myBlockchain.AddBlockToBlockchain("Полиморфин")
-	myBlockchain.AddBlockToBlockchain("Берсеркерум")
+	myBlockchain.AddBlockToBlockchain([]byte("Пипапупа"))
+	myBlockchain.AddBlockToBlockchain([]byte("Полиморфин"))
+	myBlockchain.AddBlockToBlockchain([]byte("Берсеркерум"))
 
 	myIterator, err := myBlockchain.CreateIterator()
 	fmt.Println(err)

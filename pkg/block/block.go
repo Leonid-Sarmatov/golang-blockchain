@@ -31,13 +31,6 @@ func (b *Block) BlockToBytes() ([]byte, error) {
 	}
 
 	return result.Bytes(), nil
-	// // Используем библиотеку для работы с бинарными данными
-	// binary.Write(&result, binary.LittleEndian, b.TimeOfCreation)
-	// result.Write(b.Data)
-	// result.Write(b.PrevBlockHash)
-	// binary.Write(&result, binary.LittleEndian, int64(b.ProofOfWorkValue))
-
-	// return result.Bytes()
 }
 
 /*
@@ -66,11 +59,11 @@ NewBlock создает новый блок в блокчейн
 	prewBlochHash - хеш предыдущего блока
 	pw - объект интерфеса для подтверждения работы
 */
-func NewBlock(data string, prewBlochHash []byte, pw ProofOfWork) (*Block, error) {
+func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork) (*Block, error) {
 	// Подготавливаем блок
 	block := &Block{
 		TimeOfCreation:   time.Now().Unix(),
-		Data:             []byte(data),
+		Data:             data,
 		PrevBlockHash:    prewBlochHash,
 		Hash:             []byte{},
 		ProofOfWorkValue: 0,
@@ -103,9 +96,9 @@ func NewGenesisBlock(hc HashCalculator) *Block {
 	log.Printf("Genesis block was successful, hash:\n%x\n", hash)
 	return &Block{
 		TimeOfCreation:   time.Now().Unix(),
-		Data:             []byte("Genesis block!"),
+		Data:             []byte("Genesis block!"),//Genesis block!
 		PrevBlockHash:    []byte{},
 		Hash:             hash,
-		ProofOfWorkValue: 0,
+		ProofOfWorkValue: 0,//0
 	}
 }

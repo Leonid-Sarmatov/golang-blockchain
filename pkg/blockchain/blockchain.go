@@ -92,7 +92,7 @@ AddBlockToBlockchain добавляет новый блок в блокчейн
 
 	data полезная нагрузка блока в виде строки
 */
-func (bc *Blockchain) AddBlockToBlockchain(data string) error {
+func (bc *Blockchain) AddBlockToBlockchain(data []byte) error {
 	// Получаем кончик блокчейна
 	tip, err := bc.Storage.BlockchainGetTip()
 	if err != nil {
@@ -109,7 +109,7 @@ func (bc *Blockchain) AddBlockToBlockchain(data string) error {
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
 	}
 
-	log.Printf("Новый блок в блокчейн успешно создан! Хеш последнего блока: %v\n", newBlock.Hash)
+	log.Printf("Новый блок в блокчейн успешно создан! Хеш последнего блока: %x\n", newBlock.Hash)
 
 	return nil
 }
