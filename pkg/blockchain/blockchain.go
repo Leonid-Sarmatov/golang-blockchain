@@ -2,9 +2,8 @@ package blockchain
 
 import (
 	"fmt"
-	block "golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/iterator"
-	proofofwork "golang_blockchain/pkg/proof_of_work"
 	"log"
 )
 
@@ -66,8 +65,7 @@ func NewBlockchain(storage BlockchainStorage,
 	if !ok {
 		fmt.Println("Блокчейн не создан! Приступаю к созданию...")
 		// Если нет, то создаем генезис блок
-		hashCalculator := proofofwork.NewProofOfWork()
-		g := block.NewGenesisBlock(hashCalculator)
+		g := block.NewGenesisBlock(hc)
 		err = storage.MakeNewBlockchain(g)
 		if err != nil {
 			return nil, fmt.Errorf("Create genesis block was failed: %v", err)
