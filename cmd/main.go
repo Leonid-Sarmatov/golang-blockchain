@@ -69,14 +69,14 @@ func main() {
 		if err != nil {
 			fmt.Printf("Can not convert bytes to transaction: %v", err)
 		}
-		
+
 		// Обходим выходы транзакции аккумулируя выходы и баланс отправителя
 		for _, output := range transaction.Outputs {
 			fmt.Printf(
 				"Адрес пользователя: %v, Баланс пользоватя (Для рассматриваемого выхода транзакции) = %v\n",
 				string(output.RecipientAddress), output.Value,
 			)
-			
+
 		}
 		// Переход к следующему блоку в блокчейне
 		myIterator.Next()

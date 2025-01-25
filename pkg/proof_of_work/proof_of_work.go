@@ -33,7 +33,7 @@ func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
 	var hash [32]byte
 	counter := 0
 
-	log.Printf("Mining the block containing: %s\n", block.Data)
+	log.Printf("Mining the block containing: %x\n", block.Data)
 	for counter < maxNonce {
 		block.ProofOfWorkValue = counter
 		bytes, err := block.BlockToBytes()
