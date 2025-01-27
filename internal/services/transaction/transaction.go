@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"golang_blockchain/pkg/block"
-	"golang_blockchain/pkg/hash_calulator"
+	hashcalulator "golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
 )
 
@@ -77,9 +77,9 @@ func NewCoinbaseTransaction(
 		PublicKey:             key,
 	}
 
-	output := TransactionOutput{
-		Value:            reward,
-		RecipientAddress: address,
+	output, err := NewTransactionOutput(reward, address, hc)
+	if err != nil {
+		return nil, fmt.Errorf("Can not create basis output: %v", err)
 	}
 
 	transaction := &Transaction{
@@ -143,17 +143,19 @@ Metka:
 
 			if bytes.Equal(output.RecipientAddress, senderAddress) {
 				// Проверка доступности выхода
-				ok, err := pool.BlockOutput(output)
-				if !ok || err != nil {
+				ok, _ := pool.BlockOutput(output)
+				if !ok {
 					continue
 				}
 
 				totalInputValue += output.Value
-				inputs = append(inputs, TransactionInput{
+				input := TransactionInput{
 					PreviousTransactionID: transaction.ID,
 					PreviousOutputHash:    output.Hash,
 					PublicKey:             senderAddress,
-				})
+				}
+
+				inputs = append(inputs, input)
 			}
 
 			if totalInputValue >= amount {
