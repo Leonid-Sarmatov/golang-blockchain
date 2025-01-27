@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"golang_blockchain/pkg/hash_calulator"
 	"log"
 	"time"
 )
@@ -81,17 +82,9 @@ func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork) (*Block, error)
 }
 
 /*
-HashCalculate описывает интерфейс для различных
-вариантов хеш-калькуляторов
-*/
-type HashCalculator interface {
-	HashCalculate(data []byte) []byte
-}
-
-/*
 NewBlock создает новый блок в блокчейн
 */
-func NewGenesisBlock(hc HashCalculator) *Block {
+func NewGenesisBlock(hc hashcalulator.HashCalculator) *Block {
 	hash := hc.HashCalculate([]byte("Genesis block!"))
 	log.Printf("Genesis block was successful, hash:\n%x\n", hash)
 	return &Block{

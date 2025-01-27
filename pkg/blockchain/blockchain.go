@@ -3,6 +3,7 @@ package blockchain
 import (
 	"fmt"
 	"golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
 	"log"
 )
@@ -33,7 +34,7 @@ type BlockchainStorage interface {
 /* Сама структура блокчейна */
 type Blockchain struct {
 	Storage  BlockchainStorage
-	HashCalc block.HashCalculator
+	HashCalc hashcalulator.HashCalculator
 	POW      block.ProofOfWork
 	TipHash  []byte
 }
@@ -46,7 +47,7 @@ type Blockchain struct {
 	pow block.ProofOfWork - абстрактный подтвердитель работы
 */
 func NewBlockchain(storage BlockchainStorage,
-	hc block.HashCalculator, pow block.ProofOfWork) (*Blockchain, error) {
+	hc hashcalulator.HashCalculator, pow block.ProofOfWork) (*Blockchain, error) {
 	// Подготавливаем структуру
 	blockchain := &Blockchain{
 		Storage:  storage,

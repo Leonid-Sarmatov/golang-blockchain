@@ -8,15 +8,39 @@ import (
 	"time"
 
 	"golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
 )
 
+/* Выход транзакции */
 type TransactionOutput struct {
 	Value            int    // Условная "монета"
 	RecipientAddress []byte // Условный "адрес" кошелька
+	TimeOfCreation   int64  // Время создания
 	Hash             []byte // Хэш выхода
 }
 
+/* Конструктор для выхода транзакции */
+func NewTransactionOutput(value int, recipientAddress []byte, hc hashcalulator.HashCalculator) (TransactionOutput, error) {
+	output := TransactionOutput{
+		Value:            value,
+		RecipientAddress: recipientAddress,
+		TimeOfCreation:   time.Now().Unix(),
+	}
+
+	var result bytes.Buffer
+	encoder := gob.NewEncoder(&result)
+
+	err := encoder.Encode(output)
+	if err != nil {
+		return output, fmt.Errorf("Convert transction output to byte slice was failed: %v\n", err)
+	}
+
+	output.Hash = hc.HashCalculate(result.Bytes())
+	return output, nil
+}
+
+/* Вход транзакции */
 type TransactionInput struct {
 	PreviousTransactionID []byte // Идентификатор предыдущей транзакции
 	PreviousOutputHash    []byte // Хэш выхода, к которому подключен данный вход
@@ -32,14 +56,6 @@ type Transaction struct {
 }
 
 /*
-HashCalculate описывает интерфейс для различных
-вариантов хеш-калькуляторов
-*/
-type HashCalculator interface {
-	HashCalculate(data []byte) []byte
-}
-
-/*
 TransactionOutputPool описывает интерфейс для
 пулла доступных выходов транзакций
 */
@@ -50,9 +66,10 @@ type TransactionOutputPool interface {
 	AddOutputs(outputs []TransactionOutput) error
 }
 
+/* Базисная транзакция с пустыми входами */
 func NewCoinbaseTransaction(
 	reward int, address, key []byte,
-	hc HashCalculator, pool TransactionOutputPool,
+	hc hashcalulator.HashCalculator, pool TransactionOutputPool,
 ) (*Transaction, error) {
 	input := TransactionInput{
 		PreviousTransactionID: []byte{},
@@ -89,9 +106,10 @@ func NewCoinbaseTransaction(
 	return transaction, nil
 }
 
+/* Обычная транзакция с переводом коинов */
 func NewTransferTransaction(
 	amount int, recipientAddress, senderAddress []byte,
-	blockchain iterator.Iterator, hc HashCalculator, pool TransactionOutputPool,
+	blockchain iterator.Iterator, hc hashcalulator.HashCalculator, pool TransactionOutputPool,
 ) (*Transaction, error) {
 
 	// Входы транзакции и суммарный счет
@@ -151,20 +169,21 @@ Metka:
 		return nil, fmt.Errorf("Insufficient funds on balance")
 	}
 
-	// Создаем выход для получателя
-	outputs := []TransactionOutput{
-		{
-			Value:            amount,
-			RecipientAddress: recipientAddress,
-		},
+	outputs := make([]TransactionOutput, 0, 2)
+
+	output1, err := NewTransactionOutput(amount, recipientAddress, hc)
+	if err != nil {
+		return nil, fmt.Errorf("Output create error: %v", err)
 	}
-	log.Printf("Пользователь адреса %v получает сдачу %v\n", senderAddress, amount)
+	outputs = append(outputs, output1)
+	log.Printf("Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
 
 	// Если отправителю нужна сдача то добавляем  выход со сдачей
-	outputs = append(outputs, TransactionOutput{
-		Value:            totalInputValue - amount,
-		RecipientAddress: senderAddress,
-	})
+	output2, err := NewTransactionOutput(totalInputValue-amount, senderAddress, hc)
+	if err != nil {
+		return nil, fmt.Errorf("Output create error: %v", err)
+	}
+	outputs = append(outputs, output2)
 	log.Printf("Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
 
 	// Создание структуры транзакции и подсчет хэша
@@ -212,4 +231,9 @@ BytesToTransaction парсит бинарное представление
 func (b *Transaction) BytesToTransaction(clice []byte) error {
 	decoder := gob.NewDecoder(bytes.NewReader(clice))
 	return decoder.Decode(b)
+}
+
+/* Перевод выхода в строку */
+func TransactionOutputToString(to TransactionOutput) string {
+	return string(to.Hash)
 }
