@@ -5,7 +5,7 @@ import (
 
 	"golang_blockchain/internal/services/transaction"
 	"golang_blockchain/internal/services/transaction_controller"
-	"golang_blockchain/pkg/block"
+	//"golang_blockchain/pkg/block"
 )
 
 func main() {
@@ -19,7 +19,7 @@ func main() {
 	controller.CreateCoinTransfer(30, []byte("Alice"), []byte("Minnya"))
 
 
-	myIterator, err := controller.CreateIterator()
+	myIterator, err := controller.Blockchain.CreateIterator()
 	fmt.Println(err)
 
 	for ok, _ := myIterator.HasNext(); ok; ok, _ = myIterator.HasNext() {
@@ -28,7 +28,7 @@ func main() {
 			break
 		}
 		// Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
-		transactionBytes := currentValue.(*block.Block).Data
+		transactionBytes := currentValue.Data
 		transaction := &transaction.Transaction{}
 		err = transaction.BytesToTransaction(transactionBytes)
 		if err != nil {

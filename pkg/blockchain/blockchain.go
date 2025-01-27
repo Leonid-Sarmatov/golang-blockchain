@@ -114,11 +114,12 @@ func (bc *Blockchain) AddBlockToBlockchain(data []byte) error {
 }
 
 /*
-Реализует интерфейс IterableCollection, для
-того что бы можно было итерироваться по блокчейну
+=======================================================
+================ Итератор по блокчейну ================
+=======================================================
 */
-func (bc *Blockchain) CreateIterator() (iterator.Iterator, error) {
-	var iterator blockchainIterator
+func (bc *Blockchain) CreateIterator() (iterator.Iterator[*block.Block], error) {
+	var iterator blockchainIterator[*block.Block]
 
 	tip, err := bc.Storage.BlockchainGetTip()
 	if err != nil {
@@ -132,12 +133,12 @@ func (bc *Blockchain) CreateIterator() (iterator.Iterator, error) {
 }
 
 /* Структура итератора по блокчейну */
-type blockchainIterator struct {
+type blockchainIterator[T any] struct {
 	blockchain  *Blockchain
 	currentHash []byte
 }
 
-func (i *blockchainIterator) Next() (interface{}, error) {
+func (i *blockchainIterator[T]) Next() (*block.Block, error) {
 	block, err := i.blockchain.Storage.GetExistBlockByHash(i.currentHash)
 	if err != nil {
 		return nil, fmt.Errorf("Iterator can not load next element: %v", err)
@@ -153,20 +154,20 @@ func (i *blockchainIterator) Next() (interface{}, error) {
 	return block, nil
 }
 
-func (i *blockchainIterator) HasNext() (bool, error) {
+func (i *blockchainIterator[T]) HasNext() (bool, error) {
 	current, err := i.Current()
 	if err != nil {
 		return false, err
 	}
 
-	if current.(*block.Block).ProofOfWorkValue == 0 || len(current.(*block.Block).PrevBlockHash) == 0 {
+	if current.ProofOfWorkValue == 0 || len(current.PrevBlockHash) == 0 {
 		return false, nil
 	}
 
 	return true, nil
 }
 
-func (i *blockchainIterator) Current() (interface{}, error) {
+func (i *blockchainIterator[T]) Current() (*block.Block, error) {
 	block, err := i.blockchain.Storage.GetExistBlockByHash(i.currentHash)
 	if err != nil {
 		return nil, fmt.Errorf("Iterator can not load current element: %v", err)
@@ -174,3 +175,9 @@ func (i *blockchainIterator) Current() (interface{}, error) {
 
 	return block, nil
 }
+
+/*
+=======================================================
+============= Конец итератора по блокчейну ============
+=======================================================
+*/

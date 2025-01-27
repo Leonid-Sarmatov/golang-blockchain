@@ -1,13 +1,13 @@
 package iterator
 
 /* Интерфейс итерируемой коллекции */
-type IterableCollection interface {
-	CreateIterator() Iterator
+type IterableCollection[T any] interface {
+	CreateIterator() Iterator[T]
 }
 
 /* Интерфейс для любого итератора */
-type Iterator interface {
+type Iterator[T any] interface {
 	HasNext() (bool, error)
-	Next() (interface{}, error)
-	Current() (interface{}, error)
+	Next() (T, error)
+	Current() (T, error)
 }

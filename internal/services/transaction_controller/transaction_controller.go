@@ -12,14 +12,14 @@ import (
 )
 
 /*
-Контроллер странзакций. Для удобства
-используем встраивание блокчейна
+Контроллер странзакций
 */
 type TransactionController struct {
 	OutputsPool transaction.TransactionOutputPool
-	blockchain.Blockchain
+	Blockchain blockchain.Blockchain
 }
 
+/* Конструктор */
 func NewTransactionController() (*TransactionController, error) {
 	var transactionController TransactionController
 
@@ -45,9 +45,19 @@ func NewTransactionController() (*TransactionController, error) {
 	return &transactionController, nil
 }
 
+/*
+CreateNewCoinBase создает базисную транзакцию, то есть создает кошелек
+
+Аргументы:
+ - int: reward первичный балланс
+ - []byte: address получатель первичного балланса
+ - []byte: key публичный адрес кошелька
+Возвращает:
+ - error: ошибка
+*/
 func (controller *TransactionController) CreateNewCoinBase(reward int, address, key []byte) error {
 	// Создание транзакции
-	t, err := transaction.NewCoinbaseTransaction(reward, address, key, controller.HashCalc, controller.OutputsPool)
+	t, err := transaction.NewCoinbaseTransaction(reward, address, key, controller.Blockchain.HashCalc, controller.OutputsPool)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -58,7 +68,7 @@ func (controller *TransactionController) CreateNewCoinBase(reward int, address, 
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
 
-	err = controller.AddBlockToBlockchain(data)
+	err = controller.Blockchain.AddBlockToBlockchain(data)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -66,9 +76,19 @@ func (controller *TransactionController) CreateNewCoinBase(reward int, address, 
 	return nil
 }
 
+/*
+CreateCoinTransfer создает обычную транзакцию, переводит коины
+
+Аргументы:
+ - int: amount сумма перевода
+ - []byte: recipientAddress публичный адрес получателя
+ - []byte: senderAddress публичный адрес отправителя
+Возвращает:
+ - error: ошибка
+*/
 func (controller *TransactionController) CreateCoinTransfer(amount int, recipientAddress, senderAddress []byte) error {
 	// Итератор по блокчейну для поиска выходов
-	iter, err := controller.CreateIterator()
+	iter, err := controller.Blockchain.CreateIterator()
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
@@ -76,7 +96,7 @@ func (controller *TransactionController) CreateCoinTransfer(amount int, recipien
 	// Создание транзакции
 	t, err := transaction.NewTransferTransaction(
 		amount, recipientAddress, senderAddress, 
-		iter, controller.HashCalc, controller.OutputsPool,
+		iter, controller.Blockchain.HashCalc, controller.OutputsPool,
 	)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
@@ -88,10 +108,21 @@ func (controller *TransactionController) CreateCoinTransfer(amount int, recipien
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
-	err = controller.AddBlockToBlockchain(data)
+	err = controller.Blockchain.AddBlockToBlockchain(data)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
 	return nil
 }
+
+/*
+CreateCoinTransfer обходит весь блокчейн с транзакциями, и считает балланс пользователя
+
+Аргументы:
+ - int: amount сумма перевода
+ - []byte: recipientAddress публичный адрес получателя
+ - []byte: senderAddress публичный адрес отправителя
+Возвращает:
+ - error: ошибка
+*/

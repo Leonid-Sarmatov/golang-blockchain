@@ -109,7 +109,7 @@ func NewCoinbaseTransaction(
 /* Обычная транзакция с переводом коинов */
 func NewTransferTransaction(
 	amount int, recipientAddress, senderAddress []byte,
-	blockchain iterator.Iterator, hc hashcalulator.HashCalculator, pool TransactionOutputPool,
+	blockchain iterator.Iterator[*block.Block], hc hashcalulator.HashCalculator, pool TransactionOutputPool,
 ) (*Transaction, error) {
 
 	// Входы транзакции и суммарный счет
@@ -123,11 +123,11 @@ Metka:
 			return nil, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
 
-		fmt.Printf("Хэш блока: %v\n", currentValue.(*block.Block).Hash)
-		fmt.Printf("Хэш предыдущего блока: %v\n", currentValue.(*block.Block).PrevBlockHash)
+		fmt.Printf("Хэш блока: %v\n", currentValue.Hash)
+		fmt.Printf("Хэш предыдущего блока: %v\n", currentValue.PrevBlockHash)
 
 		// Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
-		transactionBytes := currentValue.(*block.Block).Data
+		transactionBytes := currentValue.Data
 		transaction := &Transaction{}
 		err = transaction.BytesToTransaction(transactionBytes)
 		if err != nil {
