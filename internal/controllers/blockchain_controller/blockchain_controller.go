@@ -5,6 +5,7 @@ import (
 	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/blockchain"
 	"golang_blockchain/pkg/boltdb"
+	"golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
 	proofofwork "golang_blockchain/pkg/proof_of_work"
 )
@@ -19,11 +20,14 @@ func NewBlockchainController() (*BlockchainController, error) {
 	// Хранилище блокчейна (база данных)
 	storage := boltdb.NewBBoltDBDriver()
 
-	// Механизм проверки работы (он же и хеш-калькулятор)
+	// Механизм проверки работы
 	pwork := proofofwork.NewProofOfWork()
 
+	// хэш-калькулятор
+	hc := hashcalulator.NewHashCalculator()
+
 	// Инициализация блокчейна
-	b, err := blockchain.NewBlockchain(storage, pwork, pwork)
+	b, err := blockchain.NewBlockchain(storage, hc, pwork)
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}

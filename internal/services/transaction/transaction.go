@@ -7,9 +7,18 @@ import (
 	"log"
 	"time"
 
-	"golang_blockchain/pkg/blockchain"
-	hashcalulator "golang_blockchain/pkg/hash_calulator"
+	"golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/iterator"
+	//hashcalulator "golang_blockchain/pkg/hash_calulator"
 )
+
+/*
+hashcalulator описывает интерфейс для
+хэш-калькулятора
+*/
+type hashCalulator interface {
+	HashCalculate(data []byte) []byte
+}
 
 /* Выход транзакции */
 type TransactionOutput struct {
@@ -20,7 +29,7 @@ type TransactionOutput struct {
 }
 
 /* Конструктор для выхода транзакции */
-func NewTransactionOutput(value int, recipientAddress []byte, hc hashcalulator.HashCalculator) (TransactionOutput, error) {
+func NewTransactionOutput(value int, recipientAddress []byte, hc hashCalulator) (TransactionOutput, error) {
 	output := TransactionOutput{
 		Value:            value,
 		RecipientAddress: recipientAddress,
@@ -66,10 +75,7 @@ type TransactionOutputPool interface {
 }
 
 /* Базисная транзакция с пустыми входами */
-func NewCoinbaseTransaction(
-	reward int, address, key []byte,
-	hc hashcalulator.HashCalculator, pool TransactionOutputPool,
-) (*Transaction, error) {
+func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, pool TransactionOutputPool) (*Transaction, error) {
 	input := TransactionInput{
 		PreviousTransactionID: []byte{},
 		PreviousOutputHash:    []byte{},
@@ -108,14 +114,8 @@ func NewCoinbaseTransaction(
 /* Обычная транзакция с переводом коинов */
 func NewTransferTransaction(
 	amount int, recipientAddress, senderAddress []byte,
-	blockchain *blockchain.Blockchain, hc hashcalulator.HashCalculator, pool TransactionOutputPool,
+	iter iterator.Iterator[*block.Block], hc hashCalulator, pool TransactionOutputPool,
 ) (*Transaction, error) {
-
-	// Итератор по блокчейну для поиска выходов
-	iter, err := blockchain.CreateIterator()
-	if err != nil {
-		return nil, fmt.Errorf("Transfer transaction was failed: %v", err)
-	}
 
 	// Входы транзакции и суммарный счет
 	inputs := make([]TransactionInput, 0)

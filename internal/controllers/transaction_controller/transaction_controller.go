@@ -7,15 +7,31 @@ import (
 	"log"
 
 	"golang_blockchain/internal/services/pool"
-	"golang_blockchain/pkg/blockchain"
+	"golang_blockchain/pkg/block"
+	//"golang_blockchain/pkg/blockchain"
+	hashcalulator "golang_blockchain/pkg/hash_calulator"
+	"golang_blockchain/pkg/iterator"
 )
 
 /*
-balanceCalculator описываем интерфейс 
+hashcalulator описывает интерфейс для
+хэш-калькулятора
+*/
+type hashCalulator interface {
+	HashCalculate(data []byte) []byte
+}
+
+/*
+balanceCalculator описываем интерфейс
 для системы подсчета балланса пользователя
 */
 type balanceCalculator interface {
-	GetByAddress(address []byte) (int, error)
+	GetByAddress(address []byte, iter iterator.Iterator[*block.Block]) (int, error)
+}
+
+type mediator interface {
+	MediatorCreateIterator() (iterator.Iterator[*block.Block], error)
+	MediatorAddBlock(data []byte, pwValue int) error
 }
 
 /*
@@ -24,24 +40,34 @@ type balanceCalculator interface {
 type TransactionController struct {
 	outputsPool       transaction.TransactionOutputPool
 	balanceCalculator balanceCalculator
-	blockchain        *blockchain.Blockchain
+	hashCalculator hashCalulator
+	//blockchain        *blockchain.Blockchain
+	mediator mediator
 }
 
 /* Конструктор */
-func NewTransactionController(bc *blockchain.Blockchain) (*TransactionController, error) {
+func NewTransactionController(m mediator) (*TransactionController, error) {
 	var transactionController TransactionController
+	transactionController.mediator = m
 
-	transactionController.blockchain = bc
+	hc := hashcalulator.NewHashCalculator()
+	transactionController.hashCalculator = hc
+
+
+	iter, err := m.MediatorCreateIterator()
+	if err != nil {
+		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
+	}
 
 	// Инициализация пулла свободных выходов
-	pool, err := pool.NewOutputsPool(bc)
+	pool, err := pool.NewOutputsPool(iter)
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
 	transactionController.outputsPool = pool
 
 	// Инициализация калькулятора балланса
-	calc, err := balancecalculator.NewBalanceCalculator(bc)
+	calc, err := balancecalculator.NewBalanceCalculator()
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
@@ -65,7 +91,7 @@ CreateNewCoinBase создает базисную транзакцию, то е�
 */
 func (controller *TransactionController) CreateNewCoinBase(reward int, address, key []byte) error {
 	// Создание транзакции
-	t, err := transaction.NewCoinbaseTransaction(reward, address, key, controller.blockchain.HashCalc, controller.outputsPool)
+	t, err := transaction.NewCoinbaseTransaction(reward, address, key, controller.hashCalculator, controller.outputsPool)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -76,7 +102,7 @@ func (controller *TransactionController) CreateNewCoinBase(reward int, address, 
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
 
-	err = controller.blockchain.AddBlockToBlockchain(data, 0)
+	err = controller.mediator.MediatorAddBlock(data, 0)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -98,10 +124,15 @@ CreateCoinTransfer создает обычную транзакцию, пере�
 func (controller *TransactionController) CreateCoinTransfer(
 	amount int, recipientAddress, senderAddress []byte,
 ) error {
+	iter, err := controller.mediator.MediatorCreateIterator()
+	if err != nil {
+		return fmt.Errorf("Transfer transaction was failed: %v", err)
+	}
+
 	// Создание транзакции
 	t, err := transaction.NewTransferTransaction(
 		amount, recipientAddress, senderAddress,
-		controller.blockchain, controller.blockchain.HashCalc, controller.outputsPool,
+		iter, controller.hashCalculator, controller.outputsPool,
 	)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
@@ -113,7 +144,7 @@ func (controller *TransactionController) CreateCoinTransfer(
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
-	err = controller.blockchain.AddBlockToBlockchain(data, 0)
+	err = controller.mediator.MediatorAddBlock(data, 0)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
@@ -131,12 +162,12 @@ GetBalanceByPublicKey обходит весь блокчейн с транзак
   - int: балланс кошелька
   - error: ошибка
 */
-func (controller *TransactionController) GetBalanceByPublicKey(address []byte) (int, error) {
+/*func (controller *TransactionController) GetBalanceByPublicKey(address []byte) (int, error) {
 	// Подсчет балланса
-	res, err := controller.balanceCalculator.GetByAddress(address)
+	res, err := controller.mediator.MediatorGetBalance(address)
 	if err != nil {
 		return -1, fmt.Errorf("Count balance was failed: %v", err)
 	}
 
 	return res, nil
-}
+}*/

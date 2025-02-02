@@ -4,10 +4,18 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"golang_blockchain/pkg/hash_calulator"
+	//"golang_blockchain/pkg/hash_calulator"
 	"log"
 	"time"
 )
+
+/*
+hashcalulator описывает интерфейс для
+хэш-калькулятора
+*/
+type hashCalulator interface {
+	HashCalculate(data []byte) []byte
+}
 
 /* Единица блокчейна */
 type Block struct {
@@ -85,7 +93,7 @@ func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork, pwValue int) (*
 /*
 NewBlock создает новый блок в блокчейн
 */
-func NewGenesisBlock(hc hashcalulator.HashCalculator) *Block {
+func NewGenesisBlock(hc hashCalulator) *Block {
 	hash := hc.HashCalculate([]byte("Genesis block!"))
 	log.Printf("Genesis block was successful, hash:\n%x\n", hash)
 	return &Block{

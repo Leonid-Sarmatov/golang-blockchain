@@ -17,6 +17,6 @@ AddBlock добавляет новый блок, и проверяет proof-of-
 Возвращает:
   - error: ошибка
 */
-func CreateNewWallet() error {
+func (controller *WalletController) CreateNewWallet() error {
 	return nil
 }
