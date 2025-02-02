@@ -4,22 +4,30 @@ import (
 	"bytes"
 	"fmt"
 	"golang_blockchain/internal/services/transaction"
-	"golang_blockchain/pkg/block"
-	"golang_blockchain/pkg/iterator"
+	"golang_blockchain/pkg/blockchain"
 )
 
-type BalanceCalculator struct{}
-
-func NewBalanceCalculator() *BalanceCalculator {
-	return &BalanceCalculator{}
+type BalanceCalculator struct{
+	blockchain *blockchain.Blockchain
 }
 
-func (bc *BalanceCalculator)GetByAddress(address []byte, blockchain iterator.Iterator[*block.Block]) (int, error) {
+func NewBalanceCalculator(b *blockchain.Blockchain) (*BalanceCalculator, error) {
+	return &BalanceCalculator{
+		blockchain: b,
+	}, nil
+}
+
+func (bc *BalanceCalculator)GetByAddress(address []byte) (int, error) {
+	iter, err := bc.blockchain.CreateIterator()
+	if err != nil {
+		return -1, fmt.Errorf("Can not create iterator by blockchain: %v", err)
+	}
+
 	outputs := make(map[string]*transaction.TransactionOutput)
 	inputs := make(map[string]interface{})
 
-	for ok, _ := blockchain.HasNext(); ok; ok, _ = blockchain.HasNext() {
-		currentValue, err := blockchain.Current()
+	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
+		currentValue, err := iter.Current()
 		if err != nil {
 			return -1, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
@@ -50,7 +58,7 @@ func (bc *BalanceCalculator)GetByAddress(address []byte, blockchain iterator.Ite
 			}
 		}
 
-		blockchain.Next()
+		iter.Next()
 	}
 
 	// Подсчитываем все значения

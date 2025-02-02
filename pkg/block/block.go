@@ -50,7 +50,7 @@ ProofofWork описывает интерфейс для структур,
 способных подтвердить работу
 */
 type ProofOfWork interface {
-	PWExecute(block *Block) (int, []byte, error)
+	PWExecute(block *Block, pwValue int) (int, []byte, error)
 }
 
 /*
@@ -60,7 +60,7 @@ NewBlock создает новый блок в блокчейн
 	prewBlochHash - хеш предыдущего блока
 	pw - объект интерфеса для подтверждения работы
 */
-func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork) (*Block, error) {
+func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork, pwValue int) (*Block, error) {
 	// Подготавливаем блок
 	block := &Block{
 		TimeOfCreation:   time.Now().Unix(),
@@ -71,10 +71,11 @@ func NewBlock(data []byte, prewBlochHash []byte, pw ProofOfWork) (*Block, error)
 	}
 
 	// Проверяем работу
-	val, hash, err := pw.PWExecute(block)
+	val, hash, err := pw.PWExecute(block, pwValue)
 	if err != nil {
 		return block, fmt.Errorf("Invalid proof-of-work, blok was not create: %v\n", err)
 	}
+	
 	block.ProofOfWorkValue = val
 	block.Hash = hash
 

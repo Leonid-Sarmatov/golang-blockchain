@@ -7,9 +7,8 @@ import (
 	"log"
 	"time"
 
-	"golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/blockchain"
 	hashcalulator "golang_blockchain/pkg/hash_calulator"
-	"golang_blockchain/pkg/iterator"
 )
 
 /* Выход транзакции */
@@ -109,16 +108,22 @@ func NewCoinbaseTransaction(
 /* Обычная транзакция с переводом коинов */
 func NewTransferTransaction(
 	amount int, recipientAddress, senderAddress []byte,
-	blockchain iterator.Iterator[*block.Block], hc hashcalulator.HashCalculator, pool TransactionOutputPool,
+	blockchain *blockchain.Blockchain, hc hashcalulator.HashCalculator, pool TransactionOutputPool,
 ) (*Transaction, error) {
+
+	// Итератор по блокчейну для поиска выходов
+	iter, err := blockchain.CreateIterator()
+	if err != nil {
+		return nil, fmt.Errorf("Transfer transaction was failed: %v", err)
+	}
 
 	// Входы транзакции и суммарный счет
 	inputs := make([]TransactionInput, 0)
 	totalInputValue := 0
 
 Metka:
-	for ok, _ := blockchain.HasNext(); ok; ok, _ = blockchain.HasNext() {
-		currentValue, err := blockchain.Current()
+	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
+		currentValue, err := iter.Current()
 		if err != nil {
 			return nil, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
@@ -163,7 +168,7 @@ Metka:
 			}
 		}
 		// Переход к следующему блоку в блокчейне
-		blockchain.Next()
+		iter.Next()
 	}
 
 	// Проверка накопленного баланса

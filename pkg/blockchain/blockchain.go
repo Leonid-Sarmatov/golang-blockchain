@@ -91,14 +91,14 @@ AddBlockToBlockchain добавляет новый блок в блокчейн
 
 	data полезная нагрузка блока в виде строки
 */
-func (bc *Blockchain) AddBlockToBlockchain(data []byte) error {
+func (bc *Blockchain) AddBlockToBlockchain(data []byte, pwValue int) error {
 	// Получаем кончик блокчейна
 	tip, err := bc.Storage.BlockchainGetTip()
 	if err != nil {
 		return fmt.Errorf("Can not get blockchain tip: %v", err)
 	}
 
-	newBlock, err := block.NewBlock(data, tip, bc.POW)
+	newBlock, err := block.NewBlock(data, tip, bc.POW, pwValue)
 	if err != nil {
 		return fmt.Errorf("Creating new block to blockchain was failed: %v", err)
 	}

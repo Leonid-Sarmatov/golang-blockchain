@@ -8,49 +8,44 @@ import (
 
 	"golang_blockchain/internal/services/pool"
 	"golang_blockchain/pkg/blockchain"
-	"golang_blockchain/pkg/boltdb"
-	proofofwork "golang_blockchain/pkg/proof_of_work"
 )
+
+/*
+balanceCalculator описываем интерфейс 
+для системы подсчета балланса пользователя
+*/
+type balanceCalculator interface {
+	GetByAddress(address []byte) (int, error)
+}
 
 /*
 Контроллер странзакций
 */
 type TransactionController struct {
 	outputsPool       transaction.TransactionOutputPool
+	balanceCalculator balanceCalculator
 	blockchain        *blockchain.Blockchain
-	balanceCalculator *balancecalculator.BalanceCalculator
 }
 
 /* Конструктор */
-func NewTransactionController() (*TransactionController, error) {
+func NewTransactionController(bc *blockchain.Blockchain) (*TransactionController, error) {
 	var transactionController TransactionController
 
-	// Хранилище блокчейна (база данных)
-	storage := boltdb.NewBBoltDBDriver()
-
-	// Механизм проверки работы (он же и хешь-калькулятор)
-	pwork := proofofwork.NewProofOfWork()
-
-	// Инициализация блокчейна
-	blockchain, err := blockchain.NewBlockchain(storage, pwork, pwork)
-	if err != nil {
-		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
-	}
-	transactionController.blockchain = blockchain
+	transactionController.blockchain = bc
 
 	// Инициализация пулла свободных выходов
-	iter, err := blockchain.CreateIterator()
+	pool, err := pool.NewOutputsPool(bc)
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
-	p, err := pool.NewOutputsPool(iter)
-	if err != nil {
-		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
-	}
-	transactionController.outputsPool = p
+	transactionController.outputsPool = pool
 
 	// Инициализация калькулятора балланса
-	transactionController.balanceCalculator = balancecalculator.NewBalanceCalculator()
+	calc, err := balancecalculator.NewBalanceCalculator(bc)
+	if err != nil {
+		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
+	}
+	transactionController.balanceCalculator = calc
 
 	log.Printf("Контроллер транзакций успешно запущен!")
 
@@ -81,7 +76,7 @@ func (controller *TransactionController) CreateNewCoinBase(reward int, address, 
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
 
-	err = controller.blockchain.AddBlockToBlockchain(data)
+	err = controller.blockchain.AddBlockToBlockchain(data, 0)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -103,16 +98,10 @@ CreateCoinTransfer создает обычную транзакцию, пере�
 func (controller *TransactionController) CreateCoinTransfer(
 	amount int, recipientAddress, senderAddress []byte,
 ) error {
-	// Итератор по блокчейну для поиска выходов
-	iter, err := controller.blockchain.CreateIterator()
-	if err != nil {
-		return fmt.Errorf("Transfer transaction was failed: %v", err)
-	}
-
 	// Создание транзакции
 	t, err := transaction.NewTransferTransaction(
 		amount, recipientAddress, senderAddress,
-		iter, controller.blockchain.HashCalc, controller.outputsPool,
+		controller.blockchain, controller.blockchain.HashCalc, controller.outputsPool,
 	)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
@@ -124,7 +113,7 @@ func (controller *TransactionController) CreateCoinTransfer(
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
-	err = controller.blockchain.AddBlockToBlockchain(data)
+	err = controller.blockchain.AddBlockToBlockchain(data, 0)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
@@ -143,14 +132,8 @@ GetBalanceByPublicKey обходит весь блокчейн с транзак
   - error: ошибка
 */
 func (controller *TransactionController) GetBalanceByPublicKey(address []byte) (int, error) {
-	// Создание итератора по блокчейну
-	iter, err := controller.blockchain.CreateIterator()
-	if err != nil {
-		return -1, fmt.Errorf("Count balance was failed: %v", err)
-	}
-
 	// Подсчет балланса
-	res, err := controller.balanceCalculator.GetByAddress(address, iter)
+	res, err := controller.balanceCalculator.GetByAddress(address)
 	if err != nil {
 		return -1, fmt.Errorf("Count balance was failed: %v", err)
 	}

@@ -28,7 +28,7 @@ func NewProofOfWork() *SelfProofOfWork {
 Реализует интерфейс проверки работы, в данной
 реализации выполняет всю работу сам
 */
-func (spw *SelfProofOfWork) PWExecute(block *block.Block) (int, []byte, error) {
+func (spw *SelfProofOfWork) PWExecute(block *block.Block, pwValue int) (int, []byte, error) {
 	var hashInt big.Int
 	var hash [32]byte
 	counter := 0
