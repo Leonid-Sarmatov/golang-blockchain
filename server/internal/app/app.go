@@ -2,8 +2,9 @@ package app
 
 import (
 	"fmt"
-	"golang_blockchain/internal/config"
+	//"golang_blockchain/internal/config"
 	"golang_blockchain/internal/mediator"
+	getwalletbalance "golang_blockchain/internal/web/handlers/get_wallet_balance"
 	"log"
 	"net/http"
 	"time"
@@ -16,7 +17,7 @@ type App struct {
 	server   *http.Server
 }
 
-func NewApp(cfg *config.Config) (*App, error) {
+func NewApp() (*App, error) {
 	var app App
 
 	//
@@ -26,8 +27,12 @@ func NewApp(cfg *config.Config) (*App, error) {
 	}
 	app.mediator = m
 
+
 	//
 	r := gin.Default()
+
+	r.POST("/api/v1/getWalletBalance", getwalletbalance.NewGetWallelBalanceHandler(m))
+
 	s := &http.Server{
 		Addr:         ":8080",
 		Handler:      r,

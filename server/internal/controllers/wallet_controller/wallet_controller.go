@@ -2,8 +2,10 @@ package walletcontroller
 
 import (
 	"fmt"
+	balancecalculator "golang_blockchain/internal/services/balance_calculator"
 	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/iterator"
+	"log"
 )
 
 type balanceCalculator interface {
@@ -20,8 +22,16 @@ type WalletController struct {
 }
 
 func NewWalletController(m mediator) (*WalletController, error) {
+	bc, err := balancecalculator.NewBalanceCalculator()
+	if err != nil {
+		return nil, fmt.Errorf("Start wallet controller was failed: %v", err)
+	}
+
+	log.Printf("Контроллер кошельков успешно запущен!")
+	
 	return &WalletController{
 		mediator: m,
+		balanceCalc: bc,
 	}, nil
 }
 

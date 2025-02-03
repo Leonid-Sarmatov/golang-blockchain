@@ -7,7 +7,8 @@ import (
 	"golang_blockchain/pkg/boltdb"
 	"golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
-	proofofwork "golang_blockchain/pkg/proof_of_work"
+	"golang_blockchain/pkg/proof_of_work"
+	"log"
 )
 
 /* Контроллер блокчейна */
@@ -32,6 +33,8 @@ func NewBlockchainController() (*BlockchainController, error) {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
 
+	log.Printf("Контроллер блокчейна успешно запущен!")
+
 	return &BlockchainController{
 		blockchain: b,
 	}, nil
@@ -47,7 +50,7 @@ AddBlock добавляет новый блок, и проверяет proof-of-
 Возвращает:
   - error: ошибка
 */
-func (controller *BlockchainController) AddBlock(data []byte, pwValue int) (error) {
+func (controller *BlockchainController) AddBlock(data []byte, pwValue int) error {
 	return controller.blockchain.AddBlockToBlockchain(data, pwValue)
 }
 

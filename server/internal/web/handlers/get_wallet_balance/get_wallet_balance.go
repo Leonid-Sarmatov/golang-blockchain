@@ -2,6 +2,7 @@ package getwalletbalance
 
 import (
 	"golang_blockchain/internal/web/msgs"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +36,9 @@ func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 			return
 		}
 
-		ctx.JSON(http.StatusInternalServerError, &msgs.ResponseWalletBalance{
+		log.Printf("Адрес HEX: %x, Адрес STR: %v, Баланс: %d", req.PublicKey, string(req.PublicKey), res)
+
+		ctx.JSON(http.StatusOK, &msgs.ResponseWalletBalance{
 			BaseResponse: msgs.BaseResponse{
 				Status: "OK!",
 			},
