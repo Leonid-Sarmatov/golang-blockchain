@@ -16,11 +16,11 @@ func main() {
 	//controller.CreateNewCoinBase(20, []byte("Bob"), []byte("Bob"))
 	//controller.CreateNewCoinBase(80, []byte("Minnya"), []byte("Minnya"))
 
-	fmt.Println(controller.GetBalanceByPublicKey([]byte("Alice")))
-	fmt.Println(controller.GetBalanceByPublicKey([]byte("Bob")))
-	fmt.Println(controller.GetBalanceByPublicKey([]byte("Minnya")))
+	//fmt.Println(controller.GetBalanceByPublicKey([]byte("Alice")))
+	//fmt.Println(controller.GetBalanceByPublicKey([]byte("Bob")))
+	//fmt.Println(controller.GetBalanceByPublicKey([]byte("Minnya")))
 
-	controller.CreateCoinTransfer(5, []byte("Alice"), []byte("Bob"))
+	//controller.CreateCoinTransfer(5, []byte("Alice"), []byte("Bob"))
 
 	/*myIterator, err := controller.Blockchain.CreateIterator()
 	fmt.Println(err)

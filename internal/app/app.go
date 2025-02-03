@@ -2,48 +2,47 @@ package app
 
 import (
 	"fmt"
-	"golang_blockchain/internal/controllers/transaction_controller"
-	"golang_blockchain/internal/controllers/wallet_controller"
+	"golang_blockchain/internal/config"
+	"golang_blockchain/internal/mediator"
+	"log"
+	"net/http"
+	"time"
 
-	//"golang_blockchain/internal/services/balance_calculator"
-	//"golang_blockchain/internal/services/transaction"
-	//"log"
-
-	//"golang_blockchain/internal/services/pool"
-	"golang_blockchain/pkg/blockchain"
-	"golang_blockchain/pkg/boltdb"
-
-	proofofwork "golang_blockchain/pkg/proof_of_work"
+	"github.com/gin-gonic/gin"
 )
 
 type App struct {
-	blockchain            *blockchain.Blockchain
-	walletController      *walletcontroller.WalletController
-	transactionController *transactioncontroller.TransactionController
+	mediator *mediator.Mediator
+	server   *http.Server
 }
 
-func NewApp() (*App, error) {
+func NewApp(cfg *config.Config) (*App, error) {
 	var app App
 
-	// Хранилище блокчейна (база данных)
-	storage := boltdb.NewBBoltDBDriver()
-
-	// Механизм проверки работы (он же и хеш-калькулятор)
-	pwork := proofofwork.NewProofOfWork()
-
-	// Инициализация блокчейна
-	b, err := blockchain.NewBlockchain(storage, pwork, pwork)
+	//
+	m, err := mediator.NewMediator()
 	if err != nil {
-		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
+		return nil, fmt.Errorf("App init was failed: %v", err)
 	}
-	app.blockchain = b
+	app.mediator = m
 
-	// Инициализация контроллера транзакций
-	tc, err := transactioncontroller.NewTransactionController(app.blockchain)
-	if err != nil {
-		return nil, fmt.Errorf("App start was failed: %v", err)
+	//
+	r := gin.Default()
+	s := &http.Server{
+		Addr:         ":8080",
+		Handler:      r,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  15 * time.Second,
 	}
-	app.transactionController = tc
+	app.server = s
 
 	return &app, nil
+}
+
+func (app *App) Start() {
+	log.Printf("Server was started!")
+	if err := app.server.ListenAndServe(); err != nil {
+		log.Printf("Server was stoped: %v", err)
+	}
 }

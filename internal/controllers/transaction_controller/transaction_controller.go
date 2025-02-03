@@ -30,8 +30,8 @@ type balanceCalculator interface {
 }
 
 type mediator interface {
-	MediatorCreateIterator() (iterator.Iterator[*block.Block], error)
-	MediatorAddBlock(data []byte, pwValue int) error
+	CreateBlocksIterator() (iterator.Iterator[*block.Block], error)
+	AddBlock(data []byte, pwValue int) error
 }
 
 /*
@@ -54,7 +54,7 @@ func NewTransactionController(m mediator) (*TransactionController, error) {
 	transactionController.hashCalculator = hc
 
 
-	iter, err := m.MediatorCreateIterator()
+	iter, err := m.CreateBlocksIterator()
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
@@ -102,7 +102,7 @@ func (controller *TransactionController) CreateNewCoinBase(reward int, address, 
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
 
-	err = controller.mediator.MediatorAddBlock(data, 0)
+	err = controller.mediator.AddBlock(data, 0)
 	if err != nil {
 		return fmt.Errorf("Coinbase transaction was failed: %v", err)
 	}
@@ -124,7 +124,7 @@ CreateCoinTransfer создает обычную транзакцию, пере�
 func (controller *TransactionController) CreateCoinTransfer(
 	amount int, recipientAddress, senderAddress []byte,
 ) error {
-	iter, err := controller.mediator.MediatorCreateIterator()
+	iter, err := controller.mediator.CreateBlocksIterator()
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
@@ -144,30 +144,10 @@ func (controller *TransactionController) CreateCoinTransfer(
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
-	err = controller.mediator.MediatorAddBlock(data, 0)
+	err = controller.mediator.AddBlock(data, 0)
 	if err != nil {
 		return fmt.Errorf("Transfer transaction was failed: %v", err)
 	}
 
 	return nil
 }
-
-/*
-GetBalanceByPublicKey обходит весь блокчейн с транзакциями, и считает балланс пользователя
-
-Аргументы:
-  - []byte: address публичный адрес для поиска балланса
-
-Возвращает:
-  - int: балланс кошелька
-  - error: ошибка
-*/
-/*func (controller *TransactionController) GetBalanceByPublicKey(address []byte) (int, error) {
-	// Подсчет балланса
-	res, err := controller.mediator.MediatorGetBalance(address)
-	if err != nil {
-		return -1, fmt.Errorf("Count balance was failed: %v", err)
-	}
-
-	return res, nil
-}*/

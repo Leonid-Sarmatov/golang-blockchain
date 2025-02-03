@@ -17,13 +17,12 @@ type Postgres struct {
 }
 
 type HTTPServer struct {
-	Address           string        `yaml:"address" env-default:"localhost:8080"`
+	Port           string        `yaml:"address" env-default:":8080"`
 	RequestTimeout    time.Duration `yaml:"request_timeout" env-default:"4s"`
 	ConnectionTimeout time.Duration `yaml:"connection_timeout" env-default:"60s"`
 }
 
 type Config struct {
-	Postgres   `yaml:"postgress`
 	HTTPServer `yaml:"http_server`
 }
 

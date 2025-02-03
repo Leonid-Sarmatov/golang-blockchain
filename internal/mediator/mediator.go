@@ -28,7 +28,10 @@ type transactionController interface {
 }
 
 type walletController interface {
+	/* CreateNewWallet создает новый кошелек */
 	CreateNewWallet() error
+	/* GetBalanceByPublicKey подсчитывает балланс кошелька */
+	GetBalanceByPublicKey(address []byte) (int, error)
 }
 
 type Mediator struct {
@@ -55,7 +58,7 @@ func NewMediator() (*Mediator, error) {
 	mediator.transactioncontroller = trc
 
 	// Загрузка контроллера кошельков
-	wc, err := walletcontroller.NewWalletController()
+	wc, err := walletcontroller.NewWalletController(&mediator)
 	if err != nil {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}
@@ -70,20 +73,20 @@ func NewMediator() (*Mediator, error) {
 =======================================================
 */
 
-func (m *Mediator) MediatorAddBlock(data []byte, pwValue int) error {
+func (m *Mediator) AddBlock(data []byte, pwValue int) error {
 	return m.blockchaincontroller.AddBlock(data, pwValue)
 }
 
-func (m *Mediator) MediatorCreateIterator() (iterator.Iterator[*block.Block], error) {
+func (m *Mediator) CreateBlocksIterator() (iterator.Iterator[*block.Block], error) {
 	iter, err := m.blockchaincontroller.CreateIterator()
 	return iter, err
 }
 
-func (m *Mediator) MediatorGetBlockByHash(hash []byte) (*block.Block, error) {
+func (m *Mediator) GetBlockByHash(hash []byte) (*block.Block, error) {
 	return nil, nil
 }
 
-func (m *Mediator) MediatorGetAllBlocks() ([]*block.Block, error) {
+func (m *Mediator) GetAllBlocks() ([]*block.Block, error) {
 	return nil, nil
 }
 
@@ -93,10 +96,25 @@ func (m *Mediator) MediatorGetAllBlocks() ([]*block.Block, error) {
 =======================================================
 */
 
-func (m *Mediator) MediatorCreateNewCoinBase(reward int, address, key []byte) error {
+func (m *Mediator) CreateNewCoinBase(reward int, address, key []byte) error {
 	return m.transactioncontroller.CreateNewCoinBase(reward, address, key)
 }
 
 func (m *Mediator) CreateCoinTransfer(amount int, recipientAddress, senderAddress []byte) error {
 	return m.transactioncontroller.CreateCoinTransfer(amount, recipientAddress, senderAddress)
+}
+
+/*
+=======================================================
+=========== Вызовы к контроллеру кошельков ============
+=======================================================
+*/
+
+func (m *Mediator) CreateNewWallet() error {
+	return m.walletcontroller.CreateNewWallet()
+}
+
+func (m *Mediator) GetWalletBalance(address []byte) (int, error) {
+	res, err := m.walletcontroller.GetBalanceByPublicKey(address)
+	return res, err
 }
