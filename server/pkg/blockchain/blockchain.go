@@ -179,7 +179,7 @@ func (i *blockchainIterator[T]) Current() (*block.Block, error) {
 		return nil, fmt.Errorf("Iterator can not load current element: %v", err)
 	}
 
-	log.Printf(" Хэш блока: %x\n Хэш предыдущего блока: %x\n Дата создания: %v\n", block.Hash, block.PrevBlockHash, block.TimeOfCreation)
+	//log.Printf(" Хэш блока: %x\n Хэш предыдущего блока: %x\n Дата создания: %v\n", block.Hash, block.PrevBlockHash, block.TimeOfCreation)
 
 	return block, nil
 }

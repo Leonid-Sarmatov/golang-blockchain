@@ -14,7 +14,7 @@ type getWalletBalance interface {
 
 func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		// Данные из тела запроса
+		/*// Данные из тела запроса
 		req := &msgs.RequestWalletBalance{}
 
 		// Получение запроса с публичным адресом кошелька
@@ -25,9 +25,10 @@ func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 				ErrorMessage: "Некорректный запрос, ошибка JSON парсинга",
 			})
 			return
-		}
+		}*/
 
-		res, err := gwb.GetWalletBalance(req.PublicKey)
+		publicKey := []byte(ctx.Query("key"))
+		res, err := gwb.GetWalletBalance(publicKey)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
 				Status:       "Error",
@@ -36,14 +37,16 @@ func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Адрес HEX: %x, Адрес STR: %v, Баланс: %d", req.PublicKey, string(req.PublicKey), res)
+		log.Printf("Адрес HEX: %x, Адрес STR: %v, Баланс: %d", publicKey, string(publicKey), res)
 
 		ctx.JSON(http.StatusOK, &msgs.ResponseWalletBalance{
 			BaseResponse: msgs.BaseResponse{
 				Status: "OK!",
 			},
-			RequestWalletBalance: *req,
-			Balance:              res,
+			RequestWalletBalance: msgs.RequestWalletBalance{
+				PublicKey: string(publicKey),
+			},
+			Balance: res,
 		})
 	}
 }

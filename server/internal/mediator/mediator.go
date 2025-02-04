@@ -3,8 +3,10 @@ package mediator
 import (
 	"fmt"
 	blockchaincontroller "golang_blockchain/internal/controllers/blockchain_controller"
+	minercontroller "golang_blockchain/internal/controllers/miner_controller"
 	transactioncontroller "golang_blockchain/internal/controllers/transaction_controller"
 	walletcontroller "golang_blockchain/internal/controllers/wallet_controller"
+	"golang_blockchain/internal/services/transaction"
 	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/iterator"
 )
@@ -21,10 +23,10 @@ type blockchainController interface {
 }
 
 type transactionController interface {
-	/* CreateNewCoinBase создает базисную транзакцию */
-	CreateNewCoinBase(reward int, address, key []byte) error
-	/* CreateCoinTransfer создает обычную транзакцию, переводит коины */
-	CreateCoinTransfer(amount int, recipientAddress, senderAddress []byte) error
+	/* CreateNewCoinBaseTransaction создает базисную транзакцию */
+	CreateNewCoinBaseTransaction(reward int, address, key []byte) (*transaction.Transaction, error)
+	/* CreateCoinTransferTransaction создает обычную транзакцию, переводит коины */
+	CreateCoinTransferTransaction(amount int, recipientAddress, senderAddress []byte) (*transaction.Transaction, error)
 }
 
 type walletController interface {
@@ -34,10 +36,16 @@ type walletController interface {
 	GetBalanceByPublicKey(address []byte) (int, error)
 }
 
+type minerController interface {
+	GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error)
+	SendCompletedWork(bytesRewardTransaction, bytesMainTransaction []byte, rewardTransactionPOW, mainTransactionPOW int) error
+}
+
 type Mediator struct {
 	blockchaincontroller  blockchainController
 	transactioncontroller transactionController
 	walletcontroller      walletController
+	minercontroller minerController
 }
 
 func NewMediator() (*Mediator, error) {
@@ -63,6 +71,13 @@ func NewMediator() (*Mediator, error) {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}
 	mediator.walletcontroller = wc
+
+	// Загрузка контроллера майнеров
+	mc, err := minercontroller.NewMinerController(&mediator)
+	if err != nil {
+		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
+	}
+	mediator.minercontroller = mc
 
 	return &mediator, nil
 }
@@ -96,12 +111,12 @@ func (m *Mediator) GetAllBlocks() ([]*block.Block, error) {
 =======================================================
 */
 
-func (m *Mediator) CreateNewCoinBase(reward int, address, key []byte) error {
-	return m.transactioncontroller.CreateNewCoinBase(reward, address, key)
+func (m *Mediator) CreateNewCoinBaseTransaction(reward int, address, key []byte) (*transaction.Transaction, error) {
+	return m.transactioncontroller.CreateNewCoinBaseTransaction(reward, address, key)
 }
 
-func (m *Mediator) CreateCoinTransfer(amount int, recipientAddress, senderAddress []byte) error {
-	return m.transactioncontroller.CreateCoinTransfer(amount, recipientAddress, senderAddress)
+func (m *Mediator) CreateCoinTransferTransaction(amount int, recipientAddress, senderAddress []byte) (*transaction.Transaction, error) {
+	return m.transactioncontroller.CreateCoinTransferTransaction(amount, recipientAddress, senderAddress)
 }
 
 /*
@@ -117,4 +132,21 @@ func (m *Mediator) CreateNewWallet() error {
 func (m *Mediator) GetWalletBalance(address []byte) (int, error) {
 	res, err := m.walletcontroller.GetBalanceByPublicKey(address)
 	return res, err
+}
+
+/*
+=======================================================
+============ Вызовы к контроллеру майнеров ============
+=======================================================
+*/
+
+func (m *Mediator) GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error) {
+	return m.minercontroller.GetWorkForMining(rewardAddress)
+}
+
+func (m *Mediator) SendCompletedWork(
+	bytesRewardTransaction, bytesMainTransaction []byte, 
+	rewardTransactionPOW, mainTransactionPOW int,
+	) (error) {
+	return m.minercontroller.SendCompletedWork(bytesRewardTransaction, bytesMainTransaction, rewardTransactionPOW, mainTransactionPOW)
 }

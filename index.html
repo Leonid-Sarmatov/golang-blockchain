@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blockchain Web Interface</title>
+    <title>Blockchain Wallet</title>
     <style>
-        /* Общие стили */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f9;
@@ -13,7 +12,7 @@
             margin: 0;
             padding: 0;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
             height: 100vh;
         }
@@ -24,9 +23,9 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             width: 400px;
             padding: 20px;
+            min-height: 320px; /* Фиксированная высота контейнера */
         }
 
-        /* Стили для вкладок */
         .tabs {
             display: flex;
             margin-bottom: 20px;
@@ -52,9 +51,9 @@
             color: #fff;
         }
 
-        /* Стили для контента вкладок */
         .tab-content {
             padding: 20px;
+            min-height: 200px; /* Фиксируем высоту контента */
         }
 
         .tab-pane {
@@ -65,7 +64,6 @@
             display: block;
         }
 
-        /* Стили для формы */
         input[type="text"] {
             width: 100%;
             padding: 10px;
@@ -90,44 +88,76 @@
             background-color: #3700b3;
         }
 
-        #responseMessage {
+        /* Окно баланса */
+        #balanceDisplay {
             margin-top: 10px;
-            font-size: 14px;
+            padding: 15px;
+            border-radius: 6px;
+            background: #f4f4f9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 18px;
+            font-weight: bold;
             color: #6200ea;
+            text-align: center;
+            min-height: 40px;
+        }
+
+        /* Лог-окно */
+        .log-container {
+            width: 400px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            padding: 15px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #333;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Вкладки -->
         <div class="tabs">
-            <button class="tab-button active" data-tab="tab1">String to Bytes</button>
-            <button class="tab-button" data-tab="tab2">Tab 2</button>
-            <button class="tab-button" data-tab="tab3">Tab 3</button>
+            <button class="tab-button active" data-tab="tab1">Check Balance</button>
+            <button class="tab-button" data-tab="tab2">Create Wallet</button>
+            <button class="tab-button" data-tab="tab3">Transfer Funds</button>
+            <button class="tab-button" data-tab="tab4">Info</button>
         </div>
 
-        <!-- Контент вкладок -->
         <div class="tab-content">
-            <!-- Вкладка 1 -->
             <div id="tab1" class="tab-pane active">
-                <h2>Convert String to Bytes</h2>
-                <input type="text" id="inputString" placeholder="Enter a string...">
-                <button id="sendButton">Send to API</button>
-                <p id="responseMessage"></p>
+                <h2>Check Wallet Balance</h2>
+                <input type="text" id="walletAddress" placeholder="Enter wallet address...">
+                <button id="checkBalanceButton">Check Balance</button>
+                <div id="balanceDisplay">Balance will be shown here</div>
             </div>
 
-            <!-- Вкладка 2 -->
             <div id="tab2" class="tab-pane">
-                <h2>Tab 2 Content</h2>
-                <p>This is the second tab.</p>
+                <h2>Create Wallet</h2>
+                <p>This feature is under development.</p>
             </div>
 
-            <!-- Вкладка 3 -->
             <div id="tab3" class="tab-pane">
-                <h2>Tab 3 Content</h2>
-                <p>This is the third tab.</p>
+                <h2>Transfer Funds</h2>
+                <input type="text" id="senderAddress" placeholder="Sender address...">
+                <input type="text" id="recipientAddress" placeholder="Recipient address...">
+                <input type="text" id="amount" placeholder="Amount...">
+                <button id="transferButton">Transfer</button>
+            </div>
+
+            <div id="tab4" class="tab-pane">
+                <h2>Info</h2>
+                <p>This is the informational tab. More details will be added soon.</p>
             </div>
         </div>
+    </div>
+
+    <div class="log-container">
+        Log messages will be displayed here.
     </div>
 
     <script>
@@ -146,48 +176,79 @@
             });
         });
 
-        // Отправка строки на API
-        document.getElementById('sendButton').addEventListener('click', async () => {
-        const inputString = document.getElementById('inputString').value;
-        const responseMessage = document.getElementById('responseMessage');
+        // Запрос баланса
+        document.getElementById('checkBalanceButton').addEventListener('click', async () => {
+            const inputString = document.getElementById('walletAddress').value;
+            const responseMessage = document.getElementById('balanceDisplay');
 
-        if (!inputString) {
-            responseMessage.textContent = 'Please enter a string.';
-            return;
-        }
-
-        // Преобразуем строку в байтовый массив
-        const encoder = new TextEncoder();
-        const byteArray = Array.from(encoder.encode(inputString));
-
-        // Отладочный вывод
-        console.log('PublicKey:', { data: byteArray });
-
-        try {
-            const response = await fetch('/api/v1/getWalletBalance', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 'PublicKey': byteArray }),
-            });
-
-            // Отладочный вывод
-            console.log('Response status:', response.status);
-
-            if (response.ok) {
-                const result = await response.json();
-                responseMessage.textContent = 'Data sent successfully!';
-                console.log('Server response:', result);  // Вывод ответа в консоль
-            } else {
-                responseMessage.textContent = 'Failed to send data.';
-                console.error('Response status:', response.status);
+            if (!inputString) {
+                responseMessage.textContent = 'Please enter a string.';
+                return;
             }
-        } catch (error) {
-            responseMessage.textContent = 'An error occurred.';
-            console.error(error);
-        }
-    });
+
+            // Формируем URL с query параметром
+            const url = `/api/v1/wallet/balance?key=${inputString}`;
+
+            console.log('Request URL:', url);
+
+            try {
+                const response = await fetch(url, {
+                    method: 'GET',
+                });
+
+                console.log('Response status:', response.status);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    balanceDisplay.textContent = `Balance: ${result.Balance} tokens`;
+                    console.log('Server response:', result);
+                } else {
+                    responseMessage.textContent = 'Failed to send data.';
+                    console.error('Response status:', response.status);
+                }
+            } catch (error) {
+                responseMessage.textContent = 'An error occurred.';
+                console.error(error);
+            }
+        });
+
+        // Перевод средств
+        document.getElementById('transferButton').addEventListener('click', async () => {
+            const senderAddress = document.getElementById('senderAddress').value;
+            const recipientAddress = document.getElementById('recipientAddress').value;
+            const amount = document.getElementById('amount').value;
+
+            if (!senderAddress || !recipientAddress || !amount) {
+                alert('Please fill all fields.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/transfer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        Amount: parseInt(amount),
+                        SenderKey: senderAddress,
+                        RecipientKey: recipientAddress,
+                    }),
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    responseMessage.textContent = 'Data sent successfully!';
+                    console.log('Server response:', result);
+                } else {
+                    responseMessage.textContent = 'Failed to send data.';
+                    console.error('Response status:', response.status);
+                }
+            } catch (error) {
+                alert('An error occurred.');
+                console.error(error);
+            }
+        });
     </script>
 </body>
 </html>

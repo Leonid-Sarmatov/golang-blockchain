@@ -3,7 +3,7 @@ package proofofwork
 import (
 	"crypto/sha256"
 	"fmt"
-	block "golang_blockchain/pkg/block"
+	"golang_blockchain/pkg/block"
 	"log"
 	"math/big"
 )

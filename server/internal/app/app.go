@@ -4,6 +4,7 @@ import (
 	"fmt"
 	//"golang_blockchain/internal/config"
 	"golang_blockchain/internal/mediator"
+	coinstransfer "golang_blockchain/internal/web/handlers/coins_transfer"
 	getwalletbalance "golang_blockchain/internal/web/handlers/get_wallet_balance"
 	"log"
 	"net/http"
@@ -31,7 +32,8 @@ func NewApp() (*App, error) {
 	//
 	r := gin.Default()
 
-	r.POST("/api/v1/getWalletBalance", getwalletbalance.NewGetWallelBalanceHandler(m))
+	r.GET("/api/v1/wallet/balance", getwalletbalance.NewGetWallelBalanceHandler(m))
+	r.POST("/api/v1/transfer", coinstransfer.NewCoinTransferHandler(m))
 
 	s := &http.Server{
 		Addr:         ":8080",
