@@ -5,16 +5,24 @@ type BaseResponse struct {
 	ErrorMessage string `json:"ErrorMessage,omitempty"`
 }
 
+type RequestWallet struct {
+	Address string
+}
+
 type RequestWork struct {
-	ConbaseTransaction string
-	Transaction        string
+	RewardAddress string
 }
 
 type ResponseWork struct {
 	BaseResponse
-	RequestWork
-	ConbaseTransactionPOW int
-	TransactionPOW        int
+	RewardBlock string
+	MainBlock   string
+}
+
+type RequestCompletedWork struct {
+	ResponseWork
+	RewardBlockPOW int
+	MainBlockPOW   int
 }
 
 type RequestWalletBalance struct {

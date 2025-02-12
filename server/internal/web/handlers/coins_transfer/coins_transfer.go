@@ -1,15 +1,20 @@
 package coinstransfer
 
 import (
+	"golang_blockchain/internal/services/transaction"
 	"golang_blockchain/internal/web/msgs"
 	"net/http"
+	"log"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 )
 
 type createCoinTransfer interface {
-	CreateCoinTransfer(amount int, recipientAddress, senderAddress []byte) error
+	CreateCoinTransferTransaction(amount int, recipientAddress, senderAddress []byte) (*transaction.Transaction, error)
+	AddTransactionToProcessing(t *transaction.Transaction) error
 }
+
 
 func NewCoinTransferHandler(cct createCoinTransfer) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -24,11 +29,26 @@ func NewCoinTransferHandler(cct createCoinTransfer) gin.HandlerFunc {
 			return
 		}
 
-		err := cct.CreateCoinTransfer(req.Amount, []byte(req.RecipientKey), []byte(req.SenderKey))
+		t, err := cct.CreateCoinTransferTransaction(req.Amount, []byte(req.RecipientKey), []byte(req.SenderKey))
 		if err != nil {
+			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось сформировать транзакцию: %v", err)
+			log.Println(errMsg)
+
 			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
 				Status:       "Error",
-				ErrorMessage: "Ошибка обработки запроса, перевод средств прерван",
+				ErrorMessage: errMsg,
+			})
+			return
+		}
+
+		err = cct.AddTransactionToProcessing(t)
+		if err != nil {
+			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось добавить транзакцию в очередь на обработку: %v", err)
+			log.Println(errMsg)
+
+			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
+				Status:       "Error",
+				ErrorMessage: errMsg,
 			})
 			return
 		}

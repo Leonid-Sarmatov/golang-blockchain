@@ -12,8 +12,10 @@ import (
 )
 
 type blockchainController interface {
-	/* AddBlock добавляет новый блок, и проверяет proof-of-work */
-	AddBlock(data []byte, pwValue int) error
+	/* AddBlock добавляет подтверждение работы и записывает блок в блокчейн */
+	AddBlock(b *block.Block, pwValue int) error
+	/* CreateBlock создает новый блок и добавляет в него данные*/
+	CreateBlock(data []byte) (*block.Block, error)
 	/* CreateIterator возвращает абстрактный итератор по блокам в блокчейне */
 	CreateIterator() (iterator.Iterator[*block.Block], error)
 	/* GetBlockByHash возвращает блок с заданным хэшом */
@@ -31,13 +33,17 @@ type transactionController interface {
 
 type walletController interface {
 	/* CreateNewWallet создает новый кошелек */
-	CreateNewWallet() error
+	CreateWallet(address []byte) error
 	/* GetBalanceByPublicKey подсчитывает балланс кошелька */
 	GetBalanceByPublicKey(address []byte) (int, error)
 }
 
 type minerController interface {
+	/* AddTransactionToProcessing отправляет перевод средств в очередь обработки */
+	AddTransactionToProcessing(t *transaction.Transaction) error
+	/* GetWorkForMining выдает работу для майнера */
 	GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error)
+	/* SendCompletedWork принимает работу на проверку */
 	SendCompletedWork(bytesRewardTransaction, bytesMainTransaction []byte, rewardTransactionPOW, mainTransactionPOW int) error
 }
 
@@ -45,7 +51,7 @@ type Mediator struct {
 	blockchaincontroller  blockchainController
 	transactioncontroller transactionController
 	walletcontroller      walletController
-	minercontroller minerController
+	minercontroller       minerController
 }
 
 func NewMediator() (*Mediator, error) {
@@ -88,8 +94,12 @@ func NewMediator() (*Mediator, error) {
 =======================================================
 */
 
-func (m *Mediator) AddBlock(data []byte, pwValue int) error {
-	return m.blockchaincontroller.AddBlock(data, pwValue)
+func (m *Mediator) AddBlock(block *block.Block, pwValue int) error {
+	return m.blockchaincontroller.AddBlock(block, pwValue)
+}
+
+func (m *Mediator) CreateBlock(data []byte) (*block.Block, error) {
+	return m.blockchaincontroller.CreateBlock(data)
 }
 
 func (m *Mediator) CreateBlocksIterator() (iterator.Iterator[*block.Block], error) {
@@ -125,8 +135,8 @@ func (m *Mediator) CreateCoinTransferTransaction(amount int, recipientAddress, s
 =======================================================
 */
 
-func (m *Mediator) CreateNewWallet() error {
-	return m.walletcontroller.CreateNewWallet()
+func (m *Mediator) CreateWallet(address []byte) error {
+	return m.walletcontroller.CreateWallet(address)
 }
 
 func (m *Mediator) GetWalletBalance(address []byte) (int, error) {
@@ -139,14 +149,17 @@ func (m *Mediator) GetWalletBalance(address []byte) (int, error) {
 ============ Вызовы к контроллеру майнеров ============
 =======================================================
 */
+func (m *Mediator) AddTransactionToProcessing(t *transaction.Transaction) error {
+	return m.minercontroller.AddTransactionToProcessing(t)
+}
 
 func (m *Mediator) GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error) {
 	return m.minercontroller.GetWorkForMining(rewardAddress)
 }
 
 func (m *Mediator) SendCompletedWork(
-	bytesRewardTransaction, bytesMainTransaction []byte, 
+	bytesRewardTransaction, bytesMainTransaction []byte,
 	rewardTransactionPOW, mainTransactionPOW int,
-	) (error) {
+) error {
 	return m.minercontroller.SendCompletedWork(bytesRewardTransaction, bytesMainTransaction, rewardTransactionPOW, mainTransactionPOW)
 }

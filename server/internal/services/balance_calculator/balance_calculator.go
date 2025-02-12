@@ -25,6 +25,9 @@ func (bc *BalanceCalculator) GetByAddress(address []byte, iter iterator.Iterator
 			return -1, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
 
+		fmt.Printf("<balance_calculator.go> Хэш текущего блока: %x\n", currentValue.Hash)
+		fmt.Printf("<balance_calculator.go> Хэш предыдущего блока: %x\n", currentValue.PrevBlockHash)
+
 		// Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
 		transactionBytes := currentValue.Data
 		tran := &transaction.Transaction{}

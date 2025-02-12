@@ -4,7 +4,7 @@ import (
 	"golang_blockchain/internal/web/msgs"
 	"log"
 	"net/http"
-
+	"fmt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,25 +14,15 @@ type getWalletBalance interface {
 
 func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		/*// Данные из тела запроса
-		req := &msgs.RequestWalletBalance{}
-
-		// Получение запроса с публичным адресом кошелька
-		if err := ctx.ShouldBindJSON(req); err != nil {
-			// Если JSON отсутствует или неверный, возвращаем ошибку
-			ctx.JSON(http.StatusBadRequest, &msgs.BaseResponse{
-				Status:       "Error",
-				ErrorMessage: "Некорректный запрос, ошибка JSON парсинга",
-			})
-			return
-		}*/
-
 		publicKey := []byte(ctx.Query("key"))
 		res, err := gwb.GetWalletBalance(publicKey)
 		if err != nil {
+			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось получить балланс кошелька: %v", err)
+			log.Println(errMsg)
+
 			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
 				Status:       "Error",
-				ErrorMessage: "Ошибка обработки запроса, не удалось получить балланс кошелька",
+				ErrorMessage: errMsg,
 			})
 			return
 		}

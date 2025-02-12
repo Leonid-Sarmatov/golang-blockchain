@@ -123,7 +123,7 @@ func (driver *BBoltDBDriver) MakeNewBlockchain(genesisBlock *block.Block) error 
 		}
 
 		// Сериализуем блок
-		data, err := genesisBlock.BlockToBytes()
+		data, err := genesisBlock.SerializeBlock()
 		if err != nil {
 			return fmt.Errorf("Can not write genesis block: %v", err)
 		}
@@ -170,7 +170,7 @@ func (driver *BBoltDBDriver) WriteNewBlock(newBlock *block.Block, lastHash []byt
 		}
 
 		// Сериализуем блок
-		data, err := newBlock.BlockToBytes()
+		data, err := newBlock.SerializeBlock()
 		if err != nil {
 			return fmt.Errorf("Can not write block: %v", err)
 		}
@@ -199,18 +199,17 @@ GetExistBlockByHash Функция для удовлетворения
 и парсит его в используемую структуру
 */
 func (driver *BBoltDBDriver) GetExistBlockByHash(hash []byte) (*block.Block, error) {
-	var block block.Block
 	data, err := driver.ReadValue([]byte(blocksBucketName), hash)
 	if err != nil {
 		return nil, fmt.Errorf("Can not get block by hash: %v", err)
 	}
 
-	err = block.BytesToBlock(data)
+	b, err := block.DeserializeBlock(data)
 	if err != nil {
 		return nil, fmt.Errorf("Read block was failed with convert error: %v", err)
 	}
 
-	return &block, nil
+	return b, nil
 }
 
 /* 

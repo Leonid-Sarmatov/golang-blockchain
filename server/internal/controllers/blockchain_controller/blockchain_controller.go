@@ -7,7 +7,7 @@ import (
 	"golang_blockchain/pkg/boltdb"
 	"golang_blockchain/pkg/hash_calulator"
 	"golang_blockchain/pkg/iterator"
-	"golang_blockchain/pkg/proof_of_work"
+	//"golang_blockchain/pkg/proof_of_work"
 	"log"
 )
 
@@ -22,13 +22,13 @@ func NewBlockchainController() (*BlockchainController, error) {
 	storage := boltdb.NewBBoltDBDriver()
 
 	// Механизм проверки работы
-	pwork := proofofwork.NewProofOfWork()
+	//pwork := proofofwork.NewProofOfWork()
 
 	// хэш-калькулятор
 	hc := hashcalulator.NewHashCalculator()
 
 	// Инициализация блокчейна
-	b, err := blockchain.NewBlockchain(storage, hc, pwork)
+	b, err := blockchain.NewBlockchain(storage, hc)
 	if err != nil {
 		return nil, fmt.Errorf("Start transaction controller was failed: %v", err)
 	}
@@ -41,7 +41,22 @@ func NewBlockchainController() (*BlockchainController, error) {
 }
 
 /*
-AddBlock добавляет новый блок, и проверяет proof-of-work
+AddBlock добавляет блок в блокчейн и записывает его на диск
+
+Аргументы:
+  - []byte: data блок (в байтовом представлении)
+  - int: pwValue 
+
+Возвращает:
+  - error: ошибка
+*/
+func (controller *BlockchainController) AddBlock(b *block.Block, pwValue int) error {
+	return controller.blockchain.AddBlockToBlockchain(b, pwValue, controller.blockchain.HachCalc)
+}
+
+/*
+CreateBlock создает блок, и записывает 
+в него полезную нагрузку (транзакцию в байтовом представлении)
 
 Аргументы:
   - []byte: data данные блока (полезная нагрузка в виде транзакции)
@@ -50,8 +65,8 @@ AddBlock добавляет новый блок, и проверяет proof-of-
 Возвращает:
   - error: ошибка
 */
-func (controller *BlockchainController) AddBlock(data []byte, pwValue int) error {
-	return controller.blockchain.AddBlockToBlockchain(data, pwValue)
+func (controller *BlockchainController) CreateBlock(data []byte) (*block.Block, error) {
+	return controller.blockchain.CreateNewBlock(data)
 }
 
 /*

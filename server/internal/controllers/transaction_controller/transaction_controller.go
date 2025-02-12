@@ -23,7 +23,7 @@ type hashCalulator interface {
 
 type mediator interface {
 	CreateBlocksIterator() (iterator.Iterator[*block.Block], error)
-	AddBlock(data []byte, pwValue int) error
+	AddBlock(b *block.Block, pwValue int) error
 }
 
 /*
@@ -80,18 +80,6 @@ func (controller *TransactionController) CreateNewCoinBaseTransaction(reward int
 	}
 
 	return t, nil
-	/*// Создание блока из транзакции и лобавление блока в блокчейн
-	data, err := t.TransactionToBytes()
-	if err != nil {
-		return fmt.Errorf("Coinbase transaction was failed: %v", err)
-	}
-
-	err = controller.mediator.AddBlock(data, 0)
-	if err != nil {
-		return fmt.Errorf("Coinbase transaction was failed: %v", err)
-	}
-
-	return nil*/
 }
 
 /*
@@ -127,19 +115,6 @@ func (controller *TransactionController) CreateCoinTransferTransaction(amount in
 	}
 
 	return t, nil
-
-	/*// Создание блока из транзакции и лобавление блока в блокчейн
-	data, err := t.TransactionToBytes()
-	if err != nil {
-		return fmt.Errorf("Transfer transaction was failed: %v", err)
-	}
-
-	err = controller.mediator.AddBlock(data, 0)
-	if err != nil {
-		return fmt.Errorf("Transfer transaction was failed: %v", err)
-	}
-
-	return nil*/
 }
 
 /*

@@ -3,6 +3,7 @@ package walletcontroller
 import (
 	"fmt"
 	balancecalculator "golang_blockchain/internal/services/balance_calculator"
+	"golang_blockchain/internal/services/transaction"
 	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/iterator"
 	"log"
@@ -14,6 +15,9 @@ type balanceCalculator interface {
 
 type mediator interface {
 	CreateBlocksIterator() (iterator.Iterator[*block.Block], error)
+	CreateNewCoinBaseTransaction(reward int, address, key []byte) (*transaction.Transaction, error)
+	AddBlock(block *block.Block, pwValue int) error
+	CreateBlock(data []byte) (*block.Block, error)
 }
 
 type WalletController struct {
@@ -45,7 +49,28 @@ AddBlock добавляет новый блок, и проверяет proof-of-
 Возвращает:
   - error: ошибка
 */
-func (controller *WalletController) CreateNewWallet() error {
+func (controller *WalletController) CreateWallet(address []byte) error {
+	log.Printf("Адрес создаваемого кошелька: %v", address)
+	transaction, err := controller.mediator.CreateNewCoinBaseTransaction(10, address, address)
+	if err != nil {
+		return fmt.Errorf("Create wallet was failed: %v", err)
+	}
+
+	byteTransaction, err := transaction.TransactionToBytes()
+	if err != nil {
+		return fmt.Errorf("Create wallet was failed: %v", err)
+	}
+
+	b, err := controller.mediator.CreateBlock(byteTransaction)
+	if err != nil {
+		return fmt.Errorf("Create wallet was failed: %v", err)
+	}
+
+	err = controller.mediator.AddBlock(b, -1)
+	if err != nil {
+		return fmt.Errorf("Create wallet was failed: %v", err)
+	}
+
 	return nil
 }
 

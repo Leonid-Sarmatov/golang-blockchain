@@ -7,12 +7,12 @@ import (
 	"golang_blockchain/internal/app"
 	//transactioncontroller "golang_blockchain/internal/services/transaction_controller"
 	//"golang_blockchain/pkg/block"
-	"github.com/redis/go-redis/v9"
-	"context"
+	//"github.com/redis/go-redis/v9"
+	//"context"
 )
 
 func main() {
-	// Создаем клиент Redis
+	/*// Создаем клиент Redis
     client := redis.NewClient(&redis.Options{
         Addr:     "185.217.198.251:6379", // Замените на адрес вашего Redis-сервера
         Password: "",              // Пароль, если требуется
@@ -40,7 +40,7 @@ func main() {
         fmt.Println("Ошибка чтения из Redis:", err)
         return
     }
-    fmt.Println("Полученное значение из Redis:", val)
+    fmt.Println("Полученное значение из Redis:", val)*/
 
 
 	app, err := app.NewApp()

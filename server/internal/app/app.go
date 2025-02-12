@@ -3,9 +3,14 @@ package app
 import (
 	"fmt"
 	//"golang_blockchain/internal/config"
+	"encoding/gob"
 	"golang_blockchain/internal/mediator"
-	coinstransfer "golang_blockchain/internal/web/handlers/coins_transfer"
-	getwalletbalance "golang_blockchain/internal/web/handlers/get_wallet_balance"
+	"golang_blockchain/internal/web/handlers/coins_transfer"
+	createwallet "golang_blockchain/internal/web/handlers/create_wallet"
+	"golang_blockchain/internal/web/handlers/get_wallet_balance"
+	getwork "golang_blockchain/internal/web/handlers/get_work"
+	"golang_blockchain/internal/web/handlers/send_completed_work"
+	"golang_blockchain/pkg/block"
 	"log"
 	"net/http"
 	"time"
@@ -21,6 +26,8 @@ type App struct {
 func NewApp() (*App, error) {
 	var app App
 
+	gob.Register(&block.Block{})
+	
 	//
 	m, err := mediator.NewMediator()
 	if err != nil {
@@ -34,6 +41,9 @@ func NewApp() (*App, error) {
 
 	r.GET("/api/v1/wallet/balance", getwalletbalance.NewGetWallelBalanceHandler(m))
 	r.POST("/api/v1/transfer", coinstransfer.NewCoinTransferHandler(m))
+	r.GET("/api/v1/work", getwork.NewGetWorkHandler(m))
+	r.POST("/api/v1/work/completed", sendcompletedwork.NewSendCompletedWorkHandler(m))
+	r.POST("/api/v1/wallet/create", createwallet.NewCreateWalletHandler(m))
 
 	s := &http.Server{
 		Addr:         ":8080",
