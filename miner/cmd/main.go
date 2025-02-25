@@ -62,21 +62,21 @@ func main() {
 			continue
 		}
 
-		decodedWork1, _ := base64.StdEncoding.DecodeString(work.RewardBlock)
-		pow1, err := miner.Do(decodedWork1)
+		decodedWork, _ := base64.StdEncoding.DecodeString(work.Block)
+		pow, err := miner.Do(decodedWork)
 		if err != nil {
 			log.Printf("Ошибка при выполнении работы 1: %v\n", err)
 			continue
 		}
 
-		decodedWork2, _ := base64.StdEncoding.DecodeString(work.MainBlock)
-		pow2, err := miner.Do(decodedWork2)
-		if err != nil {
-			log.Printf("Ошибка при выполнении работы 2: %v\n", err)
-			continue
-		}
+		// decodedWork2, _ := base64.StdEncoding.DecodeString(work.MainBlock)
+		// pow2, err := miner.Do(decodedWork2)
+		// if err != nil {
+		// 	log.Printf("Ошибка при выполнении работы 2: %v\n", err)
+		// 	continue
+		// }
 
-		err = client.SendCompletedWorkRequest(work, pow1, pow2)
+		err = client.SendCompletedWorkRequest(work, pow)
 		if err != nil {
 			log.Printf("Ошибка при отправке работы: %v\n", err)
 			continue

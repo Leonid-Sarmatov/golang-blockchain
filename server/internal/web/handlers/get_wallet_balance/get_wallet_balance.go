@@ -27,7 +27,7 @@ func NewGetWallelBalanceHandler(gwb getWalletBalance) gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Адрес HEX: %x, Адрес STR: %v, Баланс: %d", publicKey, string(publicKey), res)
+		log.Printf("Адрес кошелька HEX: %x, Адрес STR: %v, Баланс: %d", publicKey, string(publicKey), res)
 
 		ctx.JSON(http.StatusOK, &msgs.ResponseWalletBalance{
 			BaseResponse: msgs.BaseResponse{

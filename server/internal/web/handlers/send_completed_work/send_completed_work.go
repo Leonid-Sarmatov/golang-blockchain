@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"golang_blockchain/internal/web/msgs"
-	hashcalulator "golang_blockchain/pkg/hash_calulator"
+	//"golang_blockchain/pkg/hash_calulator"
 	"log"
 	"net/http"
 
@@ -12,7 +12,7 @@ import (
 )
 
 type acceptWork interface {
-	SendCompletedWork(bytesRewardBlock, bytesMainBlock []byte, rewardBlockPOW, mainBlockPOW int) error
+	SendCompletedWork(bytesBlock []byte, BlockPOW int) error
 }
 
 func NewSendCompletedWorkHandler(aw acceptWork) gin.HandlerFunc {
@@ -28,13 +28,13 @@ func NewSendCompletedWorkHandler(aw acceptWork) gin.HandlerFunc {
 			return
 		}
 
-		d := hashcalulator.NewHashCalculator()
-		decodedBlock1, _ := base64.StdEncoding.DecodeString(req.RewardBlock)
-		decodedBlock2, _ := base64.StdEncoding.DecodeString(req.MainBlock)
-		fmt.Println(">>>", d.HashCalculate(decodedBlock1), "\n>>>", d.HashCalculate(decodedBlock2))
-		fmt.Printf("Блок 1 = %x\n, Блок 2 = %x\n", decodedBlock1, decodedBlock2)
+		//d := hashcalulator.NewHashCalculator()
+		decodedBlock, _ := base64.StdEncoding.DecodeString(req.Block)
+		//decodedBlock2, _ := base64.StdEncoding.DecodeString(req.MainBlock)
+		//fmt.Println(">>>", d.HashCalculate(decodedBlock1), "\n>>>", d.HashCalculate(decodedBlock2))
+		//fmt.Printf("Блок 1 = %x\n, Блок 2 = %x\n", decodedBlock1, decodedBlock2)
 		
-		err := aw.SendCompletedWork(decodedBlock1, decodedBlock2, req.RewardBlockPOW, req.MainBlockPOW)
+		err := aw.SendCompletedWork(decodedBlock, req.BlockPOW)
 		if err != nil {
 			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось принять работу: %v", err)
 			log.Println(errMsg)

@@ -51,22 +51,22 @@ AddBlock добавляет новый блок, и проверяет proof-of-
 */
 func (controller *WalletController) CreateWallet(address []byte) error {
 	log.Printf("Адрес создаваемого кошелька: %v", address)
-	transaction, err := controller.mediator.CreateNewCoinBaseTransaction(10, address, address)
+	tx, err := controller.mediator.CreateNewCoinBaseTransaction(10, address, address)
 	if err != nil {
 		return fmt.Errorf("Create wallet was failed: %v", err)
 	}
 
-	byteTransaction, err := transaction.TransactionToBytes()
+	byteTx, err := transaction.SerializeTransactions([]transaction.Transaction{*tx})
 	if err != nil {
 		return fmt.Errorf("Create wallet was failed: %v", err)
 	}
 
-	b, err := controller.mediator.CreateBlock(byteTransaction)
+	b, err := controller.mediator.CreateBlock(byteTx)
 	if err != nil {
 		return fmt.Errorf("Create wallet was failed: %v", err)
 	}
 
-	err = controller.mediator.AddBlock(b, -1)
+	err = controller.mediator.AddBlock(b, 0)
 	if err != nil {
 		return fmt.Errorf("Create wallet was failed: %v", err)
 	}

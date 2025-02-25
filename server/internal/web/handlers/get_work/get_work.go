@@ -11,14 +11,14 @@ import (
 )
 
 type getWork interface {
-	GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error)
+	GetWorkForMining(rewardAddress []byte) ([]byte, error)
 }
 
 func NewGetWorkHandler(gw getWork) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		rewardAddress := []byte(ctx.Query("reward_address"))
-		log.Printf("reward_address: STR = %s, BYTE: %v", string(rewardAddress), rewardAddress)
-		work1, work2, err := gw.GetWorkForMining(rewardAddress)
+		log.Printf("<get_work.go> Адрес вознаграждения майнера: STR = %s, BYTE: %v", string(rewardAddress), rewardAddress)
+		work, err := gw.GetWorkForMining(rewardAddress)
 		if err != nil {
 			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось выдать работу: %v", err)
 			log.Println(errMsg)
@@ -30,15 +30,13 @@ func NewGetWorkHandler(gw getWork) gin.HandlerFunc {
 			return
 		}
 
-		log.Printf("Первый блок: %v", base64.StdEncoding.EncodeToString(work1))
-		log.Printf("Второй блок: %v", base64.StdEncoding.EncodeToString(work2))
+		log.Printf("<get_work.go> Блок выданный майнеру (для передачи по сети): %v", base64.StdEncoding.EncodeToString(work))
 
 		ctx.JSON(http.StatusOK, &msgs.ResponseWork{
 			BaseResponse: msgs.BaseResponse{
 				Status: "OK!",
 			},
-			RewardBlock: base64.StdEncoding.EncodeToString(work1),
-			MainBlock: base64.StdEncoding.EncodeToString(work2),
+			Block: base64.StdEncoding.EncodeToString(work),
 		})
 	}
 }

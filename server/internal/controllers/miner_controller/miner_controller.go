@@ -96,50 +96,38 @@ GetWorkForMining возвращает подготовленную для
   - []byte: главная транзакция
   - error: ошибка
 */
-func (controller *MinerController) GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error) {
-	// Берем основную транзакцию из очереди, парсим в байты, и создаем блок для майнинга
+func (controller *MinerController) GetWorkForMining(rewardAddress []byte) ([]byte, error) {
+	// Берем основную транзакцию из очереди
 	mainTransaction, err := controller.queue.PullTransaction()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
+		return nil, fmt.Errorf("Can not return work for minig: %v", err)
 	}
 
-	bytesMainTransaction, err := mainTransaction.TransactionToBytes()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
-	}
-
-	mainBlock, err := controller.mediator.CreateBlock(bytesMainTransaction)
-	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
-	}
-
-	bytesMainBlock, err := mainBlock.SerializeBlock()
-	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
-	}
-
-	// Создаем транзакцию вознаграждения, парсим в байты, и создаем блок для майнинга
+	// Создаем транзакцию вознаграждения
 	rewardTransaction, err := controller.mediator.CreateNewCoinBaseTransaction(1, rewardAddress, rewardAddress)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
+		return nil, fmt.Errorf("Can not return work for minig: %v", err)
 	}
 
-	bytesRewardTransaction, err := rewardTransaction.TransactionToBytes()
+	// Формируем список транзакций и парсим его в байтовый слайс
+	transactions, err := transaction.SerializeTransactions([]transaction.Transaction{*rewardTransaction, *mainTransaction})
 	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
+		return nil, fmt.Errorf("Can not return work for minig: %v", err)
 	}
 
-	rewardBlock, err := controller.mediator.CreateBlock(bytesRewardTransaction)
+	// Формируем блок с транзакциями
+	b, err := controller.mediator.CreateBlock(transactions)
 	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
+		return nil, fmt.Errorf("Can not return work for minig: %v", err)
 	}
 
-	bytesRewardBlock, err := rewardBlock.SerializeBlock()
+	// Сериализуем блок в байты
+	bytesBlock, err := b.SerializeBlock()
 	if err != nil {
-		return nil, nil, fmt.Errorf("Can not return work for minig: %v", err)
+		return nil, fmt.Errorf("Can not return work for minig: %v", err)
 	}
 
-	return bytesRewardBlock, bytesMainBlock, nil
+	return bytesBlock, nil
 }
 
 /*
@@ -154,48 +142,25 @@ SendCompletedWork
 Возвращает:
   - error: ошибка
 */
-func (controller *MinerController) SendCompletedWork(
-	bytesRewardBlock, bytesMainBlock []byte,
-	rewardTransactionPOW, mainTransactionPOW int,
-) error {
-	// Преобразуем байты в транзакцию вознаграждения и проверяем доказательство работы
-	rewardBlock, err := block.DeserializeBlock(bytesRewardBlock)
+func (controller *MinerController) SendCompletedWork(bytesBlock []byte, POW int) error {
+	// Преобразуем байты в список транзакций
+	b, err := block.DeserializeBlock(bytesBlock)
 	if err != nil {
 		return fmt.Errorf("The work cannot be accepted: %v", err)
 	}
 
-	rewardPOWOK, err := controller.cheker.Check(rewardBlock, rewardTransactionPOW, controller.hashCalculator)
+	POWOK, err := controller.cheker.Check(b, POW, controller.hashCalculator)
 	if err != nil {
 		return fmt.Errorf("The work cannot be accepted: %v", err)
 	}
 
-	// Преобразуем байты в основную транзакцию и проверяем доказательство работы
-	mainBlock, err := block.DeserializeBlock(bytesMainBlock)
-	if err != nil {
-		return fmt.Errorf("The work cannot be accepted: %v", err)
-	}
-
-	mainPOWOK, err := controller.cheker.Check(mainBlock, mainTransactionPOW, controller.hashCalculator)
-	if err != nil {
-		return fmt.Errorf("The work cannot be accepted: %v", err)
-	}
-	
-	a, _ := proofofwork.Pipapupa(bytesMainBlock, controller.hashCalculator)
-	fmt.Printf(" >>>>>>>>> %v\n", a)
-
-	// Если все прошло успешно, записываем блоки в блокчейн
-	if mainPOWOK && rewardPOWOK {
-		err = controller.mediator.AddBlock(rewardBlock, rewardTransactionPOW)
+	// Если все прошло успешно, записываем блок в блокчейн
+	if POWOK {
+		err = controller.mediator.AddBlock(b, POW)
 		if err != nil {
 			return fmt.Errorf("The work cannot be accepted: %v", err)
 		}
-
-		err = controller.mediator.AddBlock(mainBlock, mainTransactionPOW)
-		if err != nil {
-			return fmt.Errorf("The work cannot be accepted: %v", err)
-		}
-
 		return nil
 	}
-	return fmt.Errorf("The work cannot be accepted: proof-of-work is not valid, %v, %v", rewardPOWOK, mainPOWOK)
+	return fmt.Errorf("The work cannot be accepted: proof-of-work is not valid, %v", POW)
 }

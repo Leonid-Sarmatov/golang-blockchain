@@ -128,7 +128,7 @@ CreateCoinTransfer создает обычную транзакцию, пере�
 Возвращает:
   - error: ошибка
 */
-func (controller *TransactionController) TransactionToBytes(t *transaction.Transaction) ([]byte, error) {
-	data, err := t.TransactionToBytes()
+func (controller *TransactionController) TransactionsToBytes(t []transaction.Transaction) ([]byte, error) {
+	data, err := transaction.SerializeTransactions(t)
 	return data, err
 }

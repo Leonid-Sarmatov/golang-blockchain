@@ -22,33 +22,49 @@ func NewOutputsPool(iter iterator.Iterator[*block.Block]) (*OutputsPool, error) 
 	inputs := make(map[string]interface{})
 
 	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
-		currentValue, err := iter.Current()
+		currentBlock, err := iter.Current()
 		if err != nil {
 			return nil, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
 
-		// Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
-		transactionBytes := currentValue.Data
-		tran := &transaction.Transaction{}
-		err = tran.BytesToTransaction(transactionBytes)
+		// Расшифровываем информацию блока, извлекаем список транзакций
+		transactions, err := transaction.DeserializeTransactions(currentBlock.Data)
 		if err != nil {
 			return nil, fmt.Errorf("Can not convert bytes to transaction: %v", err)
 		}
 
+		// Определяем входы входящие в блок и выходы выходящие из блока
+		ins := make(map[string]interface{})
+		outs := make(map[string]*transaction.TransactionOutput)
+		for _, tx := range transactions {
+			for _, out := range tx.Outputs {
+				outs[string(out.Hash)] = &out
+			}
+
+			for _, in := range tx.Inputs {
+				if _, ok := outs[string(in.PreviousOutputHash)]; ok {
+					delete(outs, string(in.PreviousOutputHash))
+				} else {
+					ins[string(in.PreviousOutputHash)] = 0
+				}
+			}
+		}
+
 		// Запоминаем все входы
-		for _, input := range tran.Inputs {
-			inputs[string(input.PreviousOutputHash)] = 1
+		for hash, _ := range ins {
+			inputs[hash] = 1
 		}
 
 		// Обходим выходы транзакции запоминая все выходы
-		for _, output := range tran.Outputs {
+		for hash, out := range outs {
 			// Если хэш выхода не используется входом, значит добавляем в словарь
-			if _, ok := inputs[string(output.Hash)]; !ok {
-				pool.outputsMap[string(output.Hash)] = &output
+			if _, ok := inputs[hash]; !ok {
+				pool.outputsMap[hash] = out
 			} else {
-				delete(pool.outputsMap, string(output.Hash))
+				delete(pool.outputsMap, hash)
 			}
 		}
+
 
 		iter.Next()
 	}

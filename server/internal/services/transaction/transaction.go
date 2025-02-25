@@ -2,7 +2,7 @@ package transaction
 
 import (
 	"bytes"
-	"encoding/gob"
+	//"encoding/gob"
 	"fmt"
 	"log"
 	"time"
@@ -29,39 +29,36 @@ type TransactionOutput struct {
 	Hash             []byte // Хэш выхода
 }
 
-/* Конструктор для выхода транзакции */
-func NewTransactionOutput(value int, recipientAddress []byte, hc hashCalulator) (TransactionOutput, error) {
-	output := TransactionOutput{
-		Value:            value,
-		RecipientAddress: recipientAddress,
-		TimeOfCreation:   time.Now().Unix(),
-	}
-
-	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
-
-	err := encoder.Encode(output)
-	if err != nil {
-		return output, fmt.Errorf("Convert transction output to byte slice was failed: %v\n", err)
-	}
-
-	output.Hash = hc.HashCalculate(result.Bytes())
-	return output, nil
-}
-
 /* Вход транзакции */
 type TransactionInput struct {
-	PreviousTransactionID []byte // Идентификатор предыдущей транзакции
+	//PreviousTransactionID []byte // Идентификатор предыдущей транзакции
 	PreviousOutputHash    []byte // Хэш выхода, к которому подключен данный вход
 	PublicKey             []byte // Публичный ключ отправителя
 }
 
 /* Транзакция */
 type Transaction struct {
-	ID             []byte
+	//ID             []byte
 	TimeOfCreation int64
 	Inputs         []TransactionInput
 	Outputs        []TransactionOutput
+}
+
+/* Конструктор для выхода транзакции */
+func NewTransactionOutput(value int, address []byte, hc hashCalulator) (TransactionOutput, error) {
+	output := TransactionOutput{
+		Value:            value,
+		RecipientAddress: address,
+		TimeOfCreation:   time.Now().Unix(),
+	}
+
+	bytesOut, err := SerializeTransactionOutput(&output)
+	if err != nil {
+		return output, fmt.Errorf("Convert transction output to byte slice was failed: %v\n", err)
+	}
+
+	output.Hash = hc.HashCalculate(bytesOut)
+	return output, nil
 }
 
 /*
@@ -78,7 +75,7 @@ type TransactionOutputPool interface {
 /* Базисная транзакция с пустыми входами */
 func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, pool TransactionOutputPool) (*Transaction, error) {
 	input := TransactionInput{
-		PreviousTransactionID: []byte{},
+		//PreviousTransactionID: []byte{},
 		PreviousOutputHash:    []byte{},
 		PublicKey:             key,
 	}
@@ -89,25 +86,25 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 	}
 
 	transaction := &Transaction{
-		ID:             []byte{},
+		//ID:             []byte{},
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         []TransactionInput{input},
 		Outputs:        []TransactionOutput{output},
 	}
 
-	bytes, err := transaction.TransactionToBytes()
-	if err != nil {
-		return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
-	}
+	// bytes, err := transaction.TransactionToBytes()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
+	// }
 
-	hash := hc.HashCalculate(bytes)
-	transaction.ID = hash
+	// hash := hc.HashCalculate(bytes)
+	// transaction.ID = hash
 	err = pool.AddOutputs([]TransactionOutput{output})
 	if err != nil {
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
 	}
 
-	log.Printf("Новый коин-базис успешно создан! Адрес пользователя: %v, Балланс пользователя: %v\n", output.RecipientAddress, output.Value)
+	log.Printf("Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
 
 	return transaction, nil
 }
@@ -124,48 +121,56 @@ func NewTransferTransaction(
 
 Metka:
 	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
-		currentValue, err := iter.Current()
+		currentBlock, err := iter.Current()
 		if err != nil {
 			return nil, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
 
-		fmt.Printf("Хэш блока: %v\n", currentValue.Hash)
-		fmt.Printf("Хэш предыдущего блока: %v\n", currentValue.PrevBlockHash)
+		log.Printf("Хэш блока: %v\n Хэш предыдущего блока: %v\n\n", currentBlock.Hash, currentBlock.PrevBlockHash)
 
-		// Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
-		transactionBytes := currentValue.Data
-		transaction := &Transaction{}
-		err = transaction.BytesToTransaction(transactionBytes)
+		// // Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
+		// transactionBytes := currentValue.Data
+		// transaction := &Transaction{}
+		// err = transaction.BytesToTransaction(transactionBytes)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("Can not convert bytes to transaction: %v", err)
+		// }
+
+		// Расшифровываем информацию блока, извлекаем список транзакций
+		transactions, err := DeserializeTransactions(currentBlock.Data)
 		if err != nil {
-			return nil, fmt.Errorf("Can not convert bytes to transaction: %v", err)
+			return nil, fmt.Errorf("Can not convert bytes to transactions: %v", err)
 		}
 
-		// Обходим выходы транзакции аккумулируя выходы и баланс отправителя
-		for _, output := range transaction.Outputs {
-			fmt.Printf(
-				"Адрес пользователя: %v, Баланс пользоватя (Для рассматриваемого выхода транзакции) = %v\n",
-				string(output.RecipientAddress), output.Value,
-			)
+		// Обходим транзакции из блока
+		for _, transaction := range transactions {
+			// Обходим выходы транзакции аккумулируя выходы и баланс отправителя
+			for _, output := range transaction.Outputs {
+				// fmt.Printf(
+				// 	"Адрес пользователя: %v, Баланс пользоватя (Для рассматриваемого выхода транзакции) = %v\n",
+				// 	string(output.RecipientAddress), output.Value,
+				// )
 
-			if bytes.Equal(output.RecipientAddress, senderAddress) {
-				// Проверка доступности выхода
-				ok, _ := pool.BlockOutput(output)
-				if !ok {
-					continue
+				if bytes.Equal(output.RecipientAddress, senderAddress) {
+					// Проверка доступности выхода
+					ok, _ := pool.BlockOutput(output)
+					if !ok {
+						continue
+					}
+
+					totalInputValue += output.Value
+					input := TransactionInput{
+						//PreviousTransactionID: transaction.ID,
+						PreviousOutputHash:    output.Hash,
+						PublicKey:             senderAddress,
+					}
+
+					inputs = append(inputs, input)
 				}
 
-				totalInputValue += output.Value
-				input := TransactionInput{
-					PreviousTransactionID: transaction.ID,
-					PreviousOutputHash:    output.Hash,
-					PublicKey:             senderAddress,
+				if totalInputValue >= amount {
+					break Metka
 				}
-
-				inputs = append(inputs, input)
-			}
-
-			if totalInputValue >= amount {
-				break Metka
 			}
 		}
 		// Переход к следующему блоку в блокчейне
@@ -196,17 +201,17 @@ Metka:
 
 	// Создание структуры транзакции и подсчет хэша
 	transaction := &Transaction{
-		ID:             []byte{},
+		//ID:             []byte{},
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         inputs,
 		Outputs:        outputs,
 	}
-	bytes, err := transaction.TransactionToBytes()
-	if err != nil {
-		return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
-	}
-	hash := hc.HashCalculate(bytes)
-	transaction.ID = hash
+	// bytes, err := transaction.TransactionToBytes()
+	// if err != nil {
+	// 	return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
+	// }
+	// hash := hc.HashCalculate(bytes)
+	// transaction.ID = hash
 
 	// Добавление в пулл новых выходов
 	pool.AddOutputs(outputs)
@@ -214,44 +219,60 @@ Metka:
 	return transaction, nil
 }
 
-/*
-TransactionToBytes преобразует экземпляр
-структуры блока в байтовый слайс
-*/
-func (b *Transaction) TransactionToBytes() ([]byte, error) {
-	var result bytes.Buffer
-	encoder := gob.NewEncoder(&result)
-
-	err := encoder.Encode(b)
-	if err != nil {
-		return nil, fmt.Errorf("Convert transction to byte slice was failed: %v\n", err)
-	}
-
-	return result.Bytes(), nil
-}
-
-/*
-BytesToTransaction парсит бинарное представление
-блока в структуру
-
-	clice - бинарные данные
-*/
-func (b *Transaction) BytesToTransaction(clice []byte) error {
-	decoder := gob.NewDecoder(bytes.NewReader(clice))
-	return decoder.Decode(b)
-}
-
 /* Перевод выхода в строку */
 func TransactionOutputToString(to TransactionOutput) string {
 	return string(to.Hash)
 }
-
 
 /*
 =======================================================
 ========= Функции сериализации/десериализации =========
 =======================================================
 */
+
+/*
+SerializeTransactionOutput сериализует выход транзакции в байтовый слайс
+
+Аргументы:
+  - *TransactionOutput: output выход транзакции
+
+Возвращает:
+  - error: ошибка
+  - []byte: готовый байтовый слайс с транзакциями
+*/
+func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
+	buf := new(bytes.Buffer)
+
+	// Запись количества коинов
+	if err := binary.Write(buf, binary.LittleEndian, int32(output.Value)); err != nil {
+		return nil, err
+	}
+
+	// Запись длины адреса кошелька
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.RecipientAddress))); err != nil {
+		return nil, err
+	}
+	// Запись самого адреса кошелька
+	if err := writeBytes(buf, output.RecipientAddress); err != nil {
+		return nil, err
+	}
+
+	// Запись времени создания
+	if err := binary.Write(buf, binary.LittleEndian, output.TimeOfCreation); err != nil {
+		return nil, err
+	}
+
+	// Запись длины хэша
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.Hash))); err != nil {
+		return nil, err
+	}
+	// Запись самого хэша
+	if err := writeBytes(buf, output.Hash); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
 
 /*
 SerializeTransactions сериализует слайс транзакций в байтовый слайс
@@ -272,10 +293,10 @@ func SerializeTransactions(transactions []Transaction) ([]byte, error) {
 	}
 	// Запись каждой транзакции 
 	for _, tx := range transactions {
-		// Запись ID
-		if err := writeBytes(buf, tx.ID); err != nil {
-			return nil, err
-		}
+		// // Запись ID
+		// if err := writeBytes(buf, tx.ID); err != nil {
+		// 	return nil, err
+		// }
 		// Запись времени создания
 		if err := binary.Write(buf, binary.LittleEndian, tx.TimeOfCreation); err != nil {
 			return nil, err
@@ -287,9 +308,9 @@ func SerializeTransactions(transactions []Transaction) ([]byte, error) {
 		}
 		// Запись самих входов
 		for _, in := range tx.Inputs {
-			if err := writeBytes(buf, in.PreviousTransactionID); err != nil {
-				return nil, err
-			}
+			// if err := writeBytes(buf, in.PreviousTransactionID); err != nil {
+			// 	return nil, err
+			// }
 			if err := writeBytes(buf, in.PreviousOutputHash); err != nil {
 				return nil, err
 			}
@@ -343,11 +364,11 @@ func DeserializeTransactions(data []byte) ([]Transaction, error) {
 	for i := uint32(0); i < txCount; i++ {
 		var tx Transaction
 
-		id, err := readBytes(buf)
-		if err != nil {
-			return nil, err
-		}
-		tx.ID = id
+		// id, err := readBytes(buf)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// tx.ID = id
 
 		if err := binary.Read(buf, binary.LittleEndian, &tx.TimeOfCreation); err != nil {
 			return nil, err
@@ -363,11 +384,11 @@ func DeserializeTransactions(data []byte) ([]Transaction, error) {
 		for j := uint32(0); j < inCount; j++ {
 			var in TransactionInput
 
-			prevTxID, err := readBytes(buf)
-			if err != nil {
-				return nil, err
-			}
-			in.PreviousTransactionID = prevTxID
+			// prevTxID, err := readBytes(buf)
+			// if err != nil {
+			// 	return nil, err
+			// }
+			// in.PreviousTransactionID = prevTxID
 
 			prevOutHash, err := readBytes(buf)
 			if err != nil {

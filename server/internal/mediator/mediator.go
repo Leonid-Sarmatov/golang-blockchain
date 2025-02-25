@@ -42,9 +42,9 @@ type minerController interface {
 	/* AddTransactionToProcessing отправляет перевод средств в очередь обработки */
 	AddTransactionToProcessing(t *transaction.Transaction) error
 	/* GetWorkForMining выдает работу для майнера */
-	GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error)
+	GetWorkForMining(rewardAddress []byte) ([]byte, error)
 	/* SendCompletedWork принимает работу на проверку */
-	SendCompletedWork(bytesRewardTransaction, bytesMainTransaction []byte, rewardTransactionPOW, mainTransactionPOW int) error
+	SendCompletedWork(bytesTransaction []byte, POW int) error
 }
 
 type Mediator struct {
@@ -153,13 +153,11 @@ func (m *Mediator) AddTransactionToProcessing(t *transaction.Transaction) error 
 	return m.minercontroller.AddTransactionToProcessing(t)
 }
 
-func (m *Mediator) GetWorkForMining(rewardAddress []byte) ([]byte, []byte, error) {
+func (m *Mediator) GetWorkForMining(rewardAddress []byte) ([]byte, error) {
 	return m.minercontroller.GetWorkForMining(rewardAddress)
 }
 
-func (m *Mediator) SendCompletedWork(
-	bytesRewardTransaction, bytesMainTransaction []byte,
-	rewardTransactionPOW, mainTransactionPOW int,
+func (m *Mediator) SendCompletedWork(bytesTransaction []byte, POW int,
 ) error {
-	return m.minercontroller.SendCompletedWork(bytesRewardTransaction, bytesMainTransaction, rewardTransactionPOW, mainTransactionPOW)
+	return m.minercontroller.SendCompletedWork(bytesTransaction, POW)
 }

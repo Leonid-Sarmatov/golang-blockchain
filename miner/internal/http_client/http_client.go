@@ -21,14 +21,12 @@ type RequestWork struct {
 
 type ResponseWork struct {
 	BaseResponse
-	RewardBlock string
-	MainBlock        string
+	Block string
 }
 
 type RequestCompletedWork struct {
 	ResponseWork
-	RewardBlockPOW int
-	MainBlockPOW        int
+	BlockPOW int
 }
 
 type HttpClient struct {
@@ -43,11 +41,10 @@ func NewHttpCleint() *HttpClient {
 	}
 }
 
-func (hc *HttpClient) SendCompletedWorkRequest(response *ResponseWork, pow1, pow2 int) error {
+func (hc *HttpClient) SendCompletedWorkRequest(response *ResponseWork, pow int) error {
 	request := &RequestCompletedWork{
 		ResponseWork: *response,
-		RewardBlockPOW: pow1,
-		MainBlockPOW: pow2,
+		BlockPOW: pow,
 	}
 
 	// Преобразуем данные в JSON

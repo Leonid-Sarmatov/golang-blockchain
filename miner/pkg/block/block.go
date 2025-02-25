@@ -193,14 +193,14 @@ func NewGenesisBlock(hc HashCalculator) *Block {
 		Data:             []byte("Genesis block!"),//Genesis block!
 		PrevBlockHash:    []byte{},
 		Hash:             hash,
-		ProofOfWorkValue: 0,//0
+		ProofOfWorkValue: -1,//0
 	}
 }
 
 /*
 SetHash устанавливает хеш блока
 */
-func (b *Block) SetHash(pow int, hc HashCalculator) error {
+func (b *Block) SetPOWAndHash(pow int, hc HashCalculator) error {
 	b.ProofOfWorkValue = pow
 	data, err := b.SerializeBlock()
 	if err != nil {

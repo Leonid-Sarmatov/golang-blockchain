@@ -93,7 +93,7 @@ func NewBlockchain(storage BlockchainStorage, hc hashCalulator) (*Blockchain, er
 }
 
 func (bc *Blockchain) AddBlockToBlockchain(b *block.Block, pwValue int, hc hashCalulator) error {
-	b.SetHash(pwValue, hc)
+	b.SetPOWAndHash(pwValue, hc)
 
 	err := bc.Storage.WriteNewBlock(b, bc.TipHash)
 	if err != nil {
@@ -169,7 +169,7 @@ func (i *blockchainIterator[T]) HasNext() (bool, error) {
 		return false, err
 	}
 
-	if current.ProofOfWorkValue == 0 || len(current.PrevBlockHash) == 0 {
+	if current.ProofOfWorkValue == -1 || len(current.PrevBlockHash) == 0 {
 		return false, nil
 	}
 
