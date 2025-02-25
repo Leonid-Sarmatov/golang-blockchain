@@ -2,10 +2,10 @@ package mediator
 
 import (
 	"fmt"
-	blockchaincontroller "golang_blockchain/internal/controllers/blockchain_controller"
-	minercontroller "golang_blockchain/internal/controllers/miner_controller"
-	transactioncontroller "golang_blockchain/internal/controllers/transaction_controller"
-	walletcontroller "golang_blockchain/internal/controllers/wallet_controller"
+    "golang_blockchain/internal/core/blockchain"
+	"golang_blockchain/internal/core/mining"
+	"golang_blockchain/internal/core/transactions"
+	"golang_blockchain/internal/core/wallets"
 	"golang_blockchain/internal/services/transaction"
 	"golang_blockchain/pkg/block"
 	"golang_blockchain/pkg/iterator"
@@ -58,28 +58,28 @@ func NewMediator() (*Mediator, error) {
 	var mediator Mediator
 
 	// Загрузка контроллера блокчейна
-	chc, err := blockchaincontroller.NewBlockchainController()
+	chc, err := blockchain.NewBlockchainController()
 	if err != nil {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}
 	mediator.blockchaincontroller = chc
 
 	// Загрузка контроллера транзакций
-	trc, err := transactioncontroller.NewTransactionController(&mediator)
+	trc, err := transactions.NewTransactionController(&mediator)
 	if err != nil {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}
 	mediator.transactioncontroller = trc
 
 	// Загрузка контроллера кошельков
-	wc, err := walletcontroller.NewWalletController(&mediator)
+	wc, err := wallets.NewWalletController(&mediator)
 	if err != nil {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}
 	mediator.walletcontroller = wc
 
 	// Загрузка контроллера майнеров
-	mc, err := minercontroller.NewMinerController(&mediator)
+	mc, err := mining.NewMinerController(&mediator)
 	if err != nil {
 		return nil, fmt.Errorf("Mediator spawn was failed: %v", err)
 	}

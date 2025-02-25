@@ -27,8 +27,6 @@ func (bc *BalanceCalculator) GetByAddress(address []byte, iter iterator.Iterator
 			return 0, fmt.Errorf("Searching transaction was failed: %v", err)
 		}
 
-		log.Printf("Текущий блок: HASH = %x", currentBlock.Hash)
-
 		// Расшифровываем информацию блока, извлекаем список транзакций
 		transactions, err := transaction.DeserializeTransactions(currentBlock.Data)
 		if err != nil {
@@ -52,9 +50,6 @@ func (bc *BalanceCalculator) GetByAddress(address []byte, iter iterator.Iterator
 			}
 		}
 
-		//log.Printf("Входы блока: %v", ins)
-		//log.Printf("Выходы блока: %v", outs)
-
 		// Запоминаем все входы
 		for hash, _ := range ins {
 			log.Printf("Вход: HASH = %x", hash)
@@ -63,7 +58,6 @@ func (bc *BalanceCalculator) GetByAddress(address []byte, iter iterator.Iterator
 
 		// Обходим выходы транзакции запоминая все выходы
 		for hash, out := range outs {
-			log.Printf("Выход: HASH = %x, получатель = %v, значение = %v", hash, string(out.RecipientAddress), out.Value)
 			// Если хэш выхода не используется входом, значит добавляем в словарь
 			if _, ok := inputs[hash]; !ok {
 				outputs[hash] = out

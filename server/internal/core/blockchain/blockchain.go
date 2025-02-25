@@ -1,4 +1,4 @@
-package blockchaincontroller
+package blockchain
 
 import (
 	"fmt"
@@ -20,9 +20,6 @@ type BlockchainController struct {
 func NewBlockchainController() (*BlockchainController, error) {
 	// Хранилище блокчейна (база данных)
 	storage := boltdb.NewBBoltDBDriver()
-
-	// Механизм проверки работы
-	//pwork := proofofwork.NewProofOfWork()
 
 	// хэш-калькулятор
 	hc := hashcalulator.NewHashCalculator()

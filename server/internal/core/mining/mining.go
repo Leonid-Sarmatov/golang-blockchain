@@ -1,4 +1,4 @@
-package minercontroller
+package mining
 
 import (
 	"fmt"

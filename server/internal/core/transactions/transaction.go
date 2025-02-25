@@ -1,4 +1,4 @@
-package transactioncontroller
+package transactions
 
 import (
 	"fmt"

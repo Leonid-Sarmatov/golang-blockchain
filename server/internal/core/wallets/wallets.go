@@ -1,4 +1,4 @@
-package walletcontroller
+package wallets
 
 import (
 	"fmt"
