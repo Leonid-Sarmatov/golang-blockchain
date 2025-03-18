@@ -10,7 +10,7 @@ import (
 
 const (
 	maxNonce   = 256 * 65535
-	targetBits = 15
+	targetBits = 20
 )
 
 type ProofOfWorkCheker struct {
@@ -32,7 +32,7 @@ type HashCalulator interface {
 	HashCalculate(data []byte) []byte
 }
 
-func (pow *ProofOfWorkCheker) Check(block *block.Block, value int, hc HashCalulator) (bool, error)  {
+func (pow *ProofOfWorkCheker) Check(block *block.Block, value int, hc HashCalulator) (bool, error) {
 	fmt.Printf("Доказательство работы: %v\n", value)
 
 	target := big.NewInt(1)

@@ -14,9 +14,10 @@ services:
       - my_network
 
   server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
+    # build:
+    #   context: ./server
+    #   dockerfile: Dockerfile
+    image: golang_blockchain-server:latest
     container_name: my-server
     depends_on:
       - nginx
@@ -32,4 +33,4 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.100.0/24
+        - subnet: 192.168.101.0/24

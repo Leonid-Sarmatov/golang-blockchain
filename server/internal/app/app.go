@@ -2,13 +2,12 @@ package app
 
 import (
 	"fmt"
-	//"golang_blockchain/internal/config"
 	"encoding/gob"
 	"golang_blockchain/internal/mediator"
 	"golang_blockchain/internal/web/handlers/coins_transfer"
-	createwallet "golang_blockchain/internal/web/handlers/create_wallet"
+	"golang_blockchain/internal/web/handlers/create_wallet"
 	"golang_blockchain/internal/web/handlers/get_wallet_balance"
-	getwork "golang_blockchain/internal/web/handlers/get_work"
+	"golang_blockchain/internal/web/handlers/get_work"
 	"golang_blockchain/internal/web/handlers/send_completed_work"
 	"golang_blockchain/pkg/block"
 	"log"

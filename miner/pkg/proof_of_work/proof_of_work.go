@@ -3,14 +3,14 @@ package proofofwork
 import (
 	"crypto/sha256"
 	"fmt"
-	"miner/pkg/block"
 	"log"
 	"math/big"
+	"miner/pkg/block"
 )
 
 const (
 	maxNonce   = 256 * 65535
-	targetBits = 15
+	targetBits = 1
 )
 
 type ProofOfWorkCheker struct {
@@ -32,7 +32,7 @@ type hashCalulator interface {
 	HashCalculate(data []byte) []byte
 }
 
-func (pow *ProofOfWorkCheker) Check(data []byte, value int, hc hashCalulator) (bool, error)  {
+func (pow *ProofOfWorkCheker) Check(data []byte, value int, hc hashCalulator) (bool, error) {
 	var hashInt big.Int
 	// Вычисляем хэш блока
 	hash := hc.HashCalculate(data)

@@ -88,8 +88,7 @@
             background-color: #3700b3;
         }
 
-        /* Окно баланса */
-        #balanceDisplay {
+        .info-display {
             margin-top: 10px;
             padding: 15px;
             border-radius: 6px;
@@ -133,14 +132,14 @@
                 <h2>Check Wallet Balance</h2>
                 <input type="text" id="walletAddress" placeholder="Enter wallet address...">
                 <button id="checkBalanceButton">Check Balance</button>
-                <div id="balanceDisplay">Balance will be shown here</div>
+                <div id="balanceDisplay" class="info-display">Balance will be shown here</div>
             </div>
 
             <div id="tab2" class="tab-pane">
                 <h2>Create Wallet</h2>
                 <input type="text" id="publicKey" placeholder="Enter public address...">
                 <button id="createWalletButton">Create Wallet</button>
-                <div id="walletMessage">Wallet creation status will be displayed here</div>
+                <div id="walletMessage" class="info-display">Wallet creation status will be displayed here</div>
             </div>            
 
             <div id="tab3" class="tab-pane">
@@ -149,6 +148,7 @@
                 <input type="text" id="recipientAddress" placeholder="Recipient address...">
                 <input type="text" id="amount" placeholder="Amount...">
                 <button id="transferButton">Transfer</button>
+                <div id="resultDisplay" class="info-display">Result of operation will be shown here</div>
             </div>
 
             <div id="tab4" class="tab-pane">
@@ -219,6 +219,7 @@
             const senderAddress = document.getElementById('senderAddress').value;
             const recipientAddress = document.getElementById('recipientAddress').value;
             const amount = document.getElementById('amount').value;
+            const responseMessage = document.getElementById('resultDisplay');
 
             if (!senderAddress || !recipientAddress || !amount) {
                 alert('Please fill all fields.');
