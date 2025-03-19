@@ -1,36 +1,107 @@
 version: '3.8'
 
 services:
-  nginx:
-    image: nginx:latest
-    container_name: my-nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./index.html:/usr/share/nginx/index.html
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    restart: unless-stopped
-    networks:
-      - my_network
+  # nginx:
+  #   image: nginx:latest
+  #   container_name: my-nginx
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./index.html:/usr/share/nginx/index.html
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #   restart: unless-stopped
+  #   networks:
+  #     - my_network
 
-  server:
-    # build:
-    #   context: ./server
-    #   dockerfile: Dockerfile
-    image: golang_blockchain-server:latest
-    container_name: my-server
-    depends_on:
-      - nginx
+  # server:
+  #   image: golang_blockchain-server:latest
+  #   container_name: my-server
+  #   depends_on:
+  #     - nginx
+  #   ports:
+  #     - "8080:8080"
+  #   volumes:
+  #    - ./bolt.db:/bolt.db
+  #   networks:
+  #     - my_network
+
+  redis-master:
+    container_name: redis-master
+    hostname: redis-master
+    image: redis:alpine
+    command: redis-server --requirepass mypassword --masterauth mypassword
     ports:
-      - "8080:8080"
-    volumes:
-     - ./bolt.db:/bolt.db
+      - "6379:6379"
+    networks:
+      my_network:
+        ipv4_address: 172.21.0.3
+
+  redis-replica1:
+    container_name: redis-replica1
+    image: redis:alpine
+    command: redis-server --replicaof 172.21.0.3 6379 --requirepass mypassword --masterauth mypassword
     networks:
       - my_network
+    depends_on:
+      - redis-master
+
+  redis-replica2:
+    container_name: redis-replica2
+    image: redis:alpine
+    command: redis-server --replicaof 172.21.0.3 6379 --requirepass mypassword --masterauth mypassword
+    networks:
+      - my_network
+    depends_on:
+      - redis-master
+
+  sentinel1:
+    image: redis:alpine
+    command: |
+      sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2
+      sentinel auth-pass mymaster mypassword
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel failover-timeout mymaster 60000
+      sentinel parallel-syncs mymaster 1' > /sentinel.conf && redis-sentinel /sentinel.conf"
+    networks:
+      - my_network
+    ports:
+      - "26379:26379"
+    depends_on:
+      - redis-master
+
+  sentinel2:
+    image: redis:alpine
+    command: |
+      sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2
+      sentinel auth-pass mymaster mypassword
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel failover-timeout mymaster 60000
+      sentinel parallel-syncs mymaster 1' > /sentinel.conf && redis-sentinel /sentinel.conf"
+    networks:
+      - my_network
+    ports:
+      - "26380:26379"
+    depends_on:
+      - redis-master
+
+  sentinel3:
+    image: redis:alpine
+    command: |
+      sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2
+      sentinel auth-pass mymaster mypassword
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel failover-timeout mymaster 60000
+      sentinel parallel-syncs mymaster 1' > /sentinel.conf && redis-sentinel /sentinel.conf"
+    networks:
+      - my_network
+    ports:
+      - "26381:26379"
+    depends_on:
+      - redis-master
 
 networks:
   my_network:
     driver: bridge
     ipam:
       config:
-        - subnet: 192.168.101.0/24
+        - subnet: 172.21.0.0/16
