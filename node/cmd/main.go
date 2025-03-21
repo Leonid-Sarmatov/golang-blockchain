@@ -70,13 +70,11 @@ func main() {
 	redisConn.Init()
 
 	go func() {
-		for {
-			for tr := range redisConn.TransactionReceiver("transactions") {
-				fmt.Printf("Received transaction:\n")
-				fmt.Printf("Time: %d\n", tr.TimeOfCreation)
-				fmt.Printf("Input PublicKey: %s\n", tr.Inputs[0].PublicKey)
-				fmt.Printf("Output Recipient: %s\n\n", tr.Outputs[0].RecipientAddress)
-			}
+		for tr := range redisConn.TransactionReceiver("transactions") {
+			fmt.Printf("Received transaction:\n")
+			fmt.Printf("Time: %d\n", tr.TimeOfCreation)
+			fmt.Printf("Input PublicKey: %s\n", tr.Inputs[0].PublicKey)
+			fmt.Printf("Output Recipient: %s\n\n", tr.Outputs[0].RecipientAddress)
 		}
 	}()
 

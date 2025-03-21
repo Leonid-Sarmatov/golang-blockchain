@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"context"
 	"log"
-	"time"
+	"node/internal/block"
 	transaction "node/internal/transaction"
+	"time"
 
 	"github.com/go-redis/redis/v8"
 )
@@ -64,7 +65,7 @@ TransactionReceiver возвращает канал с поступающими 
 */
 func (r *RedisAdapter) TransactionReceiver(transactionSubName string) chan *transaction.Transaction {
 	// Канал с поступающими транзакциями
-	output := make(chan *transaction.Transaction, 16)
+	output := make(chan *transaction.Transaction)
 
 	// Фоновый процесс записи поступающих транзакций в канал
 	go func() {
@@ -88,7 +89,7 @@ func (r *RedisAdapter) TransactionReceiver(transactionSubName string) chan *tran
 			}
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
-			log.Println("PubSub channel closed. Reconnecting...")
+			log.Println("PubSub channel with transactions closed. Reconnecting...")
             time.Sleep(1 * time.Second)
 		}
 	}()
@@ -96,3 +97,44 @@ func (r *RedisAdapter) TransactionReceiver(transactionSubName string) chan *tran
 	return output
 }
 
+/*
+BlockReceiver возвращает канал с поступающими транзакциями
+
+Аргументы:
+  - blockSubName string: строка названием публикации сблоками
+
+Возвращает:
+  - chan *block.Block: канал с указателями на приходящие блоки
+*/
+func (r *RedisAdapter) BlockReceiver(blockSubName string) chan *block.Block {
+	// Канал с поступающими транзакциями
+	output := make(chan *block.Block)
+
+	// Фоновый процесс записи поступающих транзакций в канал
+	go func() {
+		defer close(output)
+
+		for {
+			// Подключение к нужному PubSub
+			pubsub := r.RedisClient.Subscribe(context.Background(), blockSubName)
+			defer pubsub.Close()
+			ch := pubsub.Channel()
+
+			// Чтение канала с сообщениями
+			for msg := range ch {
+				blk, err := block.DeserializeBlock([]byte(msg.Payload))
+				if err != nil {
+					log.Printf("Can not deserialization block: %v", err)
+					break
+				}
+				output <- blk
+			}
+
+			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
+			log.Println("PubSub channel with blocks closed. Reconnecting...")
+            time.Sleep(1 * time.Second)
+		}
+	}()
+
+	return output
+}

@@ -26,7 +26,7 @@ type Iterator[T any] interface {
 /*
 Интерфейс для механизма сохранения блокчейна
 */
-type BlockchainStorage interface {
+type blockchainStorage interface {
 	/* Функция проверяющая наличие блокчейна в хранилище */
 	IsBlockchainExist() (bool, error)
 	/* Функция сохраняющая готовый генезис блок в хранилище */
@@ -39,26 +39,72 @@ type BlockchainStorage interface {
 	GetExistBlockByHash(lastHash []byte) (*block.Block, error)
 }
 
-/* Сама структура блокчейна */
+/* 
+Блокчейн 
+*/
 type Blockchain struct {
-	Storage  BlockchainStorage
+	Storage  blockchainStorage
 	TipHash  []byte
 	HachCalc hashCalulator
 }
 
 /*
-NewBlockchain возвращает подготовленную для
-майнинга работу: транзакция вознаграждения и
-главная транзакция (в виде байтовых слайсов)
+NewBlockchain конструктор блокчейна
 
 Аргументы:
   - storage BlockchainStorage: абстрактное хранилище
+  - hc hashCalulator: абстрактный хэш-калькулятор
 
 Возвращает:
-  - *Blockchain: главная транзакция
+  - *Blockchain: указатель на блокчейн
   - error: ошибка
 */
-func NewBlockchain(storage BlockchainStorage, hc hashCalulator) (*Blockchain, error) {
+func NewBlockchain(storage blockchainStorage, hc hashCalulator) *Blockchain {
+	return &Blockchain{
+		Storage:  storage,
+		HachCalc: hc,
+	}
+}
+
+/*
+NewBlockchain загрузка блокчейна с диска,
+вовзращает ошибку, в случае неудачи
+
+Возвращает:
+  - error: ошибка
+*/
+func (bc *Blockchain) LoadSavedBlockchain() error {
+	// Проверяем создан ли блокчейн на диске
+	ok, err := bc.Storage.IsBlockchainExist()
+	if err != nil {
+		return fmt.Errorf("Check exist blockchain was failed: %v", err)
+	}
+
+	if !ok {
+		fmt.Println("<blockchain.go> Блокчейн не создан! Приступаю к созданию...")
+		// Если нет, то создаем генезис блок
+		g := block.NewGenesisBlock(bc.HachCalc)
+		err = bc.Storage.MakeNewBlockchain(g)
+		if err != nil {
+			return fmt.Errorf("Create genesis block was failed: %v", err)
+		}
+	}
+
+	log.Println("<blockchain.go> Загружаю кончик...")
+
+	// Загружаем кончик генезис блока
+	tip, err := bc.Storage.BlockchainGetTip()
+	if err != nil {
+		return fmt.Errorf("Can not init blockchain tip: %v", err)
+	}
+	bc.TipHash = tip
+
+	log.Printf("<blockchain.go> Блокчейн успешно инициализирован! Значение кончика: %v\n", tip)
+
+	return nil
+}
+
+/*func NewBlockchain(storage BlockchainStorage, hc hashCalulator) (*Blockchain, error) {
 	// Подготавливаем структуру
 	blockchain := &Blockchain{
 		Storage:  storage,
@@ -94,10 +140,14 @@ func NewBlockchain(storage BlockchainStorage, hc hashCalulator) (*Blockchain, er
 	log.Printf("Значение кончика получено: %v\n", tip)
 
 	return blockchain, nil
-}
+}*/
 
-func (bc *Blockchain) AddBlockToBlockchain(b *block.Block, pwValue int, hc hashCalulator) error {
-	b.SetPOWAndHash(pwValue, hc)
+func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
+	// err := b.SetPOWAndHash(powValue, bc.HachCalc)
+	// if err != nil {
+	// 	log.Printf("<blockchain.go> Не удалось сохранить блок!")
+	// 	return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
+	// }
 
 	err := bc.Storage.WriteNewBlock(b, bc.TipHash)
 	if err != nil {
@@ -105,25 +155,25 @@ func (bc *Blockchain) AddBlockToBlockchain(b *block.Block, pwValue int, hc hashC
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
 	}
 
-	log.Printf("Новый блок в блокчейн успешно создан! Хеш последнего блока: %x\n", b.Hash)
+	log.Printf("<blockchain.go> Новый блок в блокчейн успешно добавлен! Хеш последнего блока: %x\n", b.Hash)
 
 	return nil
 }
 
-func (bc *Blockchain) CreateNewBlock(data []byte) (*block.Block, error) {
-	// Получаем кончик блокчейна
-	tip, err := bc.Storage.BlockchainGetTip()
-	if err != nil {
-		return nil, fmt.Errorf("Can not get blockchain tip: %v", err)
-	}
+// func (bc *Blockchain) CreateNewBlock(data []byte) (*block.Block, error) {
+// 	// Получаем кончик блокчейна
+// 	tip, err := bc.Storage.BlockchainGetTip()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Can not get blockchain tip: %v", err)
+// 	}
 
-	newBlock, err := block.NewBlock(data, tip)
-	if err != nil {
-		return nil, fmt.Errorf("Creating new block to blockchain was failed: %v", err)
-	}
+// 	newBlock, err := block.NewBlock(data, tip)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("Creating new block to blockchain was failed: %v", err)
+// 	}
 
-	return newBlock, nil
-}
+// 	return newBlock, nil
+// }
 
 /*
 =======================================================
@@ -168,7 +218,6 @@ func (i *blockchainIterator[T]) Next() (*block.Block, error) {
 
 func (i *blockchainIterator[T]) HasNext() (bool, error) {
 	current, err := i.Current()
-	//log.Printf("POW: %v, LEN: %v\n", current.ProofOfWorkValue, len(current.PrevBlockHash))
 	if err != nil {
 		return false, err
 	}
@@ -185,8 +234,6 @@ func (i *blockchainIterator[T]) Current() (*block.Block, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Iterator can not load current element: %v", err)
 	}
-
-	//log.Printf(" Хэш блока: %x\n Хэш предыдущего блока: %x\n Дата создания: %v\n", block.Hash, block.PrevBlockHash, block.TimeOfCreation)
 
 	return block, nil
 }
