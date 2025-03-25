@@ -1,9 +1,10 @@
 package blockchain
 
 import (
+	"bytes"
 	"fmt"
-	"node/internal/block"
 	"log"
+	"node/internal/block"
 )
 
 /*
@@ -143,11 +144,10 @@ func (bc *Blockchain) LoadSavedBlockchain() error {
 }*/
 
 func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
-	// err := b.SetPOWAndHash(powValue, bc.HachCalc)
-	// if err != nil {
-	// 	log.Printf("<blockchain.go> Не удалось сохранить блок!")
-	// 	return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
-	// }
+	if bytes.Compare(b.PrevBlockHash, bc.TipHash) == 0 {
+		log.Printf("<blockchain.go> Хэши не совпали, блок не сохранен!")
+		return fmt.Errorf("Saving new block to blockchain was failed: %v", "prev-block-hach not equal tip-hash")
+	}
 
 	err := bc.Storage.WriteNewBlock(b, bc.TipHash)
 	if err != nil {

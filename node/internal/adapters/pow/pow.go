@@ -87,7 +87,7 @@ func NewProofOfWorkSolver() *proofOfWorkSolver {
 	}
 }
 
-func (solver *proofOfWorkSolver)Exec(blk *block.Block) (int, error) {
+func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, error) {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
@@ -110,7 +110,7 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block) (int, error) {
 		blk.ProofOfWorkValue = counter // Устанавливаем текущее значение nonce
 		bytes, err := blk.SerializeBlock()
 		if err != nil {
-			return -1, fmt.Errorf("Can not calculate hash from block: %v\n", err)
+			return -1, fmt.Errorf("Can not calculate proof-of-work from block: %v", err)
 		}
 
 		// Вычисляем хэш блока
@@ -122,6 +122,12 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block) (int, error) {
 			break // Хэш подходит, завершаем цикл
 		} else {
 			counter++ // Увеличиваем nonce и продолжаем поиск
+		}
+
+		// Отмена подсвета POW
+		select {
+		case <- cancel:
+			return -1, fmt.Errorf("Cancel calculate proof-of-work")
 		}
 	}
 

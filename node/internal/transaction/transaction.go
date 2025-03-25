@@ -417,7 +417,7 @@ SerializeTransactions сериализует слайс транзакций в 
   - []byte: готовый байтовый слайс с транзакциями
   - error: ошибка
 */
-func SerializeTransactions(transactions []Transaction) ([]byte, error) {
+func SerializeTransactions(transactions []*Transaction) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// Запись количества транзакций
@@ -426,7 +426,7 @@ func SerializeTransactions(transactions []Transaction) ([]byte, error) {
 	}
 	// Запись каждой транзакции 
 	for _, tx := range transactions {
-		err := SerializeTransaction(buf, tx)
+		err := SerializeTransaction(buf, *tx)
 		if err != nil {
 			return nil, err
 		}
@@ -444,7 +444,7 @@ DeserializeTransactions восстанавливает слайс транзак
   - []Transaction: список транзакций
   - error: ошибка
 */
-func DeserializeTransactions(data []byte) ([]Transaction, error) {
+func DeserializeTransactions(data []byte) ([]*Transaction, error) {
 	// Ридер для вычитывания сериализованных данных
 	buf := bytes.NewReader(data)
 
@@ -455,13 +455,13 @@ func DeserializeTransactions(data []byte) ([]Transaction, error) {
 	}
 
 	// Создание слайса транзакций и поочередное вычитывание их из ридера
-	txs := make([]Transaction, txCount)
+	txs := make([]*Transaction, txCount)
 	for i := uint32(0); i < txCount; i++ {
 		tx, err := DeserializeTransaction(buf)
 		if err != nil {
 			return nil, err
 		}
-		txs[i] = tx
+		txs[i] = &tx
 	}
 	return txs, nil
 }
