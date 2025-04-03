@@ -160,6 +160,10 @@ func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
 	return nil
 }
 
+func (bc *Blockchain) IsAlreadyExistBlock(b *block.Block) bool {
+	return bytes.Compare(b.Hash, bc.TipHash) == 0
+}
+
 // func (bc *Blockchain) CreateNewBlock(data []byte) (*block.Block, error) {
 // 	// Получаем кончик блокчейна
 // 	tip, err := bc.Storage.BlockchainGetTip()

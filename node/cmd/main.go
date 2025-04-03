@@ -1,14 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
-	redisadapter "node/internal/adapters/redis_adapter"
+	redisadapter "node/internal/adapters/transport/replicator"
 	"node/internal/transaction"
 	"time"
-	"bytes"
-
 	//"github.com/go-redis/redis/v8"
 )
 

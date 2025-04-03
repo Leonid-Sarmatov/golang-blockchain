@@ -3,7 +3,7 @@ package pow
 import (
 	"crypto/sha256"
 	"node/internal/block"
-	"log"
+	//"log"
 	"fmt"
 	"math/big"
 )
@@ -43,7 +43,7 @@ func NewProofOfWorkCheker() *proofOfWorkCheker {
 }
 
 func (pow *proofOfWorkCheker) Check(block *block.Block) (bool, error) {
-	log.Printf("Проверка доказательства работы...")
+	//log.Printf("Проверка доказательства работы...")
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
@@ -67,10 +67,10 @@ func (pow *proofOfWorkCheker) Check(block *block.Block) (bool, error) {
 
 	// Проверяем, удовлетворяет ли хэш целевому значению
 	if hashInt.Cmp(target) == -1 {
-		log.Printf("Доказательство работы подтверждено. Значение: %v", block.ProofOfWorkValue)
+		//log.Printf("Доказательство работы подтверждено. Значение: %v", block.ProofOfWorkValue)
 		return true, nil // Хэш подходит
 	} else {
-		log.Printf("Доказательство работы не подтверждено. Значение: %v", block.ProofOfWorkValue)
+		//log.Printf("Доказательство работы не подтверждено. Значение: %v", block.ProofOfWorkValue)
 		return false, nil // Хэш не подходит
 	}
 }
@@ -127,7 +127,7 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, 
 		// Отмена подсвета POW
 		select {
 		case <- cancel:
-			return -1, fmt.Errorf("Cancel calculate proof-of-work")
+			return -1, nil
 		}
 	}
 

@@ -1,7 +1,9 @@
 package blockchainadapter
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"node/internal/adapters/pow"
 	"node/internal/adapters/storage"
 	"node/internal/block"
@@ -68,21 +70,30 @@ func (adapter *BlockchainAdapter)TryNetworkLoadBlockchain() (bool, error) {
 	return false, nil
 }
 
-func (adapter *BlockchainAdapter)BlockLoader(input <-chan *block.Block) chan error {
+func (adapter *BlockchainAdapter)BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan error {
 	output := make(chan error)
 
 	// Фоновый процесс чтения и записи блоков
 	go func() {
-		defer close(output)
-
 		for {
-			// Чтение канала с блоками
-			for blk := range input {
+			select {
+			case blk := <- input:
+				// Чтение канала с блоками и запись блока на диск
 				err := adapter.blockchain.AddBlockToBlockchain(blk)
 				if err != nil {
 					output <- fmt.Errorf("Can not add block: %v", err)
 				}
+			case <- ctx.Done():
+				// Корректное завершение функции
+				close(output)
+				return
 			}
+			// for blk := range input {
+			// 	err := adapter.blockchain.AddBlockToBlockchain(blk)
+			// 	if err != nil {
+			// 		output <- fmt.Errorf("Can not add block: %v", err)
+			// 	}
+			// }
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
 			// log.Println("PubSub channel with transactions closed. Reconnecting...")
@@ -91,5 +102,31 @@ func (adapter *BlockchainAdapter)BlockLoader(input <-chan *block.Block) chan err
 	}()
 
 	return output
+}
+
+func (adapter *BlockchainAdapter) AlreadyExistBlockFilter(
+	ctx context.Context, input <-chan *block.Block,
+	) chan *block.Block {
+		output := make(chan *block.Block)
+
+		go func() {
+			for {
+				select {
+				case blk := <- input:
+					// Проверка по хэшу, был ли этот блок записан только что
+					if adapter.blockchain.IsAlreadyExistBlock(blk) {
+						log.Printf("<blockchain_adapter.go> Блок только что был записан, пропускаем")
+						continue
+					}
+					output <- blk
+				case <- ctx.Done():
+					// Корректное завершение функции
+					close(output)
+					return
+				}
+			}
+		}()
+
+		return output
 }
 

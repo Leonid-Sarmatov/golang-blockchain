@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package generated;
+
+option go_package = "node/internal/transport/grpc/generated";
+
+service NodeService {
+    // Получение баланса кошелька
+    rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
+
+    // Получение всех доступных выходов транзакций
+    rpc GetFreeTransactionsOutputs (GetFreeTransactionsOutputsRequest) returns (GetFreeTransactionsOutputsResponse);
+}
+
+message GetBalanceRequest {
+    string address = 1;
+}
+
+message GetBalanceResponse {
+    int32 balance = 1;
+}
+
+message GetFreeTransactionsOutputsRequest {
+    int32 max_outputs = 1;
+}
+
+message TransactionOutput {
+    int32 value = 1;
+    string recipient_address = 2;
+    int64 time_of_creation = 3;
+    string hash = 4;
+}
+
+message GetFreeTransactionsOutputsResponse {
+    repeated TransactionOutput outputs = 1;
+}

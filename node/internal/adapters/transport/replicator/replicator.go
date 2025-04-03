@@ -11,12 +11,12 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
-type RedisAdapter struct {
+type RedisReplicator struct {
 	RedisClient *redis.Client
 }
 
-func NewRedisAdapter() *RedisAdapter {
-	return &RedisAdapter{}
+func NewRedisAdapter() *RedisReplicator {
+	return &RedisReplicator{}
 }
 
 /*
@@ -29,7 +29,7 @@ Init инициализирует подключение к redis и
 Возвращает:
   - error: ошибка
 */
-func (r *RedisAdapter) Init() error {
+func (r *RedisReplicator) Init() error {
 	ctx := context.Background()
 
 	// Конфигурация Sentinel
@@ -63,7 +63,7 @@ TransactionReceiver возвращает канал с поступающими 
 Возвращает:
   - chan *transaction.Transaction: канал с указателями на транзакции
 */
-func (r *RedisAdapter) TransactionReceiver(transactionSubName string) chan *transaction.Transaction {
+func (r *RedisReplicator) TransactionReceiverProcess(transactionSubName string) <-chan *transaction.Transaction {
 	// Канал с поступающими транзакциями
 	output := make(chan *transaction.Transaction)
 
@@ -106,7 +106,7 @@ BlockReceiver возвращает канал с поступающими тра
 Возвращает:
   - chan *block.Block: канал с указателями на приходящие блоки
 */
-func (r *RedisAdapter) BlockReceiver(blockSubName string) chan *block.Block {
+func (r *RedisReplicator) BlockReceiverProcess(blockSubName string) <-chan *block.Block {
 	// Канал с поступающими транзакциями
 	output := make(chan *block.Block)
 
@@ -137,4 +137,44 @@ func (r *RedisAdapter) BlockReceiver(blockSubName string) chan *block.Block {
 	}()
 
 	return output
+}
+
+/*
+BlockTransmitter создает процесс для отправки
+новых блоков в сеть
+
+Аргументы:
+  - ctx context.Context: контекст для отмены
+  - blks <-chan *block.Block: канал с блоками для отправки
+  - blockSubName string: строка названием публикации сблоками
+
+Возвращает:
+  - chan erro: канал возникающих ошибок
+*/
+func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) <-chan error {
+	// Канал с ошибками
+	outputs := make(chan error)
+
+	// Фоновый процесс отправки блоков в сеть
+	go func() {
+		for {
+			select {
+			case blk := <- blks:
+				// Отправка созданного данным узлом блока в сеть
+				msg, err := blk.SerializeBlock()
+				if err != nil {
+					log.Printf("<replication.go> Ошибка отправки блока в сеть: %v", err)
+					outputs <- err
+					continue
+				}
+				r.RedisClient.Publish(context.Background(), blockSubName, string(msg))
+			case <- ctx.Done():
+				// Корректное завершение работы
+				close(outputs)
+				return 
+			}
+		}
+	}()
+
+	return outputs
 }
