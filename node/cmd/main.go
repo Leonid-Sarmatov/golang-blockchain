@@ -69,7 +69,7 @@ func main() {
 	redisConn.Init()
 
 	go func() {
-		for tr := range redisConn.TransactionReceiver("transactions") {
+		for tr := range redisConn.TransactionReceiverProcess("transactions1") {
 			fmt.Printf("Received transaction:\n")
 			fmt.Printf("Time: %d\n", tr.TimeOfCreation)
 			fmt.Printf("Input PublicKey: %s\n", tr.Inputs[0].PublicKey)
@@ -105,6 +105,6 @@ func main() {
 		}
 
 		counter++
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 }

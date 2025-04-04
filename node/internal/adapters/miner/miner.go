@@ -28,10 +28,11 @@ type Miner struct {
 	Storage blockchainStorage
 }
 
-func NewMiner(checker powChecker, solver powSolver) *Miner {
+func NewMiner(checker powChecker, solver powSolver, storage blockchainStorage) *Miner {
 	return &Miner{
 		checker: checker,
 		solver:  solver,
+		Storage: storage,
 	}
 }
 

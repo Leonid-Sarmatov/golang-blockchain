@@ -57,10 +57,32 @@ func (server *Server) Stop() {
 	server.grpcServer.GracefulStop()
 }
 
-func (server *Server) GetBalance(context.Context, *GetBalanceRequest) (*GetBalanceResponse, error) {
-	return nil, nil
+func (server *Server) GetBalance(ctx context.Context, req *GetBalanceRequest) (*GetBalanceResponse, error) {
+	var response GetBalanceResponse
+	res, err := server.getBalance.GetBalance([]byte(req.Address))
+	if err != nil {
+		log.Printf("Не удалось выдать баланс кошелька %v, ошибка: %v", string(req.Address), err)
+		return &response, err
+	}
+	response.Balance = res
+	return &response, nil
 }
 
-func (server *Server) GetFreeTransactionsOutputs(context.Context, *GetFreeTransactionsOutputsRequest) (*GetFreeTransactionsOutputsResponse, error) {
-	return nil, nil
+func (server *Server) GetFreeTransactionsOutputs(ctx context.Context, req *GetFreeTransactionsOutputsRequest) (*GetFreeTransactionsOutputsResponse, error) {
+	var response GetFreeTransactionsOutputsResponse
+	res, err := server.getOutputs.GetFreeTransactionsOutputs()
+	if err != nil {
+		log.Printf("Не удалось выдать список свободных транзакций, ошибка: %v", err)
+		return &response, err
+	}
+	response.Outputs = make([]*TransactionOutput, len(res))
+	for i, val := range res {
+		response.Outputs[i] = &TransactionOutput{
+			Value: int32(val.Value),
+			RecipientAddress: string(val.RecipientAddress),
+			TimeOfCreation: val.TimeOfCreation,
+			Hash: string(val.Hash),
+		}
+	}
+	return &response, nil
 }

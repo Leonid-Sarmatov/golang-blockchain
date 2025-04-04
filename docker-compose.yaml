@@ -15,9 +15,21 @@ services:
 
   mem-pool:
     image: mem-pool:latest
-    container_name: mem-pool1
+    container_name: my-mem-pool1
     depends_on:
       - nginx
+    ports:
+      - "40001:40001"
+
+  node1:
+    image: blockchain-node:latest
+    container_name: my-node1
+    depends_on:
+      - nginx
+    ports:
+      - "40001:40001"
+    volumes:
+      - ./bolt1.db:/bolt.db
 
   # server:
   #   image: golang_blockchain-server:latest

@@ -65,7 +65,6 @@ func NewCore(br blockReceiver, bt blockTransmitter, tr transactionReceiver, b bl
 		blockReceiver:       br,
 		blockTransmitter:    bt,
 		miner:               m,
-		//replicator: r,
 	}
 }
 
@@ -122,12 +121,4 @@ func (core *Core) Init() error {
 	core.blockTransmitter.BlockTransmitterProcess(context.Background(), resBlChan, "blocks1")
 
 	return nil
-}
-
-func (core *Core) CreateWallet(address []byte) error {
-	return nil
-}
-
-func (core *Core) GetWalletBalance(address []byte) (int, error) {
-	return 0, nil
 }

@@ -26,8 +26,6 @@ func (hc *hashCalculator) HashCalculate(data []byte) []byte {
 	return hash[:]
 }
 
-
-
 type proofOfWorkCheker struct {
 	target *big.Int
 	hashCalculator

@@ -3,8 +3,8 @@ package api
 import (
 	"log"
 	"net/http"
-	"node/internal/adapters/transport/server/http_server/handlers/create_wallet"
-	"node/internal/adapters/transport/server/http_server/handlers/get_wallet_balance"
+	//"node/internal/adapters/transport/server/http_server/handlers/create_wallet"
+	//"node/internal/adapters/transport/server/http_server/handlers/get_wallet_balance"
 	"node/internal/core"
 	"time"
 
@@ -23,8 +23,8 @@ func NewApi(core *core.Core) *Api {
 func (api *Api) Init() {
 	r := gin.Default()
 
-	r.GET("/api/v1/wallet/balance", getwalletbalance.NewGetWallelBalanceHandler(api.core))
-	r.POST("/api/v1/wallet/create", createwallet.NewCreateWalletHandler(api.core))
+	//r.GET("/api/v1/wallet/balance", getwalletbalance.NewGetWallelBalanceHandler(api.core))
+	//r.POST("/api/v1/wallet/create", createwallet.NewCreateWalletHandler(api.core))
 
 	s := &http.Server{
 		Addr:         ":8080",
