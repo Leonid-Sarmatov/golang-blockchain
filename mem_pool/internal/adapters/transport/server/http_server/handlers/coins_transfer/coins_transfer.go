@@ -1,8 +1,8 @@
 package coinstransfer
 
 import (
-	"golang_blockchain/internal/services/transaction"
-	"golang_blockchain/internal/web/msgs"
+	"mem_pool/internal/transaction"
+	"mem_pool/internal/adapters/transport/server/http_server/msgs"
 	"net/http"
 	"log"
 	"fmt"

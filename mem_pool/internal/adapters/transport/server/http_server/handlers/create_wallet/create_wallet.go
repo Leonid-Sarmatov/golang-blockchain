@@ -2,7 +2,7 @@ package createwallet
 
 import (
 	"fmt"
-	"golang_blockchain/internal/web/msgs"
+	"mem_pool/internal/adapters/transport/server/http_server/msgs"
 	"log"
 	"net/http"
 

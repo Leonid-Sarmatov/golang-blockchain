@@ -1,7 +1,7 @@
 package getwalletbalance
 
 import (
-	"golang_blockchain/internal/web/msgs"
+	"mem_pool/internal/adapters/transport/server/http_server/msgs"
 	"log"
 	"net/http"
 	"fmt"
