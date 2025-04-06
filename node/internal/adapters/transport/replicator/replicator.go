@@ -5,7 +5,7 @@ import (
 	"context"
 	"log"
 	"node/internal/block"
-	transaction "node/internal/transaction"
+	"node/internal/transaction"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -33,7 +33,7 @@ func (r *RedisReplicator) Init() error {
 	ctx := context.Background()
 
 	// Конфигурация Sentinel
-	sentinelAddrs := []string{"localhost:26379", "localhost:26380", "localhost:26381"}
+	sentinelAddrs := []string{"sentinel1:26379", "sentinel2:26380", "sentinel3:26381"}
 	masterName := "mymaster"
 	password := "mypassword"
 
@@ -63,7 +63,7 @@ TransactionReceiver возвращает канал с поступающими 
 Возвращает:
   - chan *transaction.Transaction: канал с указателями на транзакции
 */
-func (r *RedisReplicator) TransactionReceiverProcess(transactionSubName string) <-chan *transaction.Transaction {
+func (r *RedisReplicator) TransactionReceiverProcess(transactionSubName string) chan *transaction.Transaction {
 	// Канал с поступающими транзакциями
 	output := make(chan *transaction.Transaction)
 
@@ -106,7 +106,7 @@ BlockReceiver возвращает канал с поступающими тра
 Возвращает:
   - chan *block.Block: канал с указателями на приходящие блоки
 */
-func (r *RedisReplicator) BlockReceiverProcess(blockSubName string) <-chan *block.Block {
+func (r *RedisReplicator) BlockReceiverProcess(blockSubName string) chan *block.Block {
 	// Канал с поступающими транзакциями
 	output := make(chan *block.Block)
 
@@ -151,7 +151,7 @@ BlockTransmitter создает процесс для отправки
 Возвращает:
   - chan erro: канал возникающих ошибок
 */
-func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) <-chan error {
+func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) chan error {
 	// Канал с ошибками
 	outputs := make(chan error)
 

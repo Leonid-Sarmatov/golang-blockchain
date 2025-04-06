@@ -211,10 +211,10 @@ func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
 		return nil, err
 	}
 
-	// Запись длины адреса кошелька
-	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.RecipientAddress))); err != nil {
-		return nil, err
-	}
+	// // Запись длины адреса кошелька
+	// if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.RecipientAddress))); err != nil {
+	// 	return nil, err
+	// }
 	// Запись самого адреса кошелька
 	if err := writeBytes(buf, output.RecipientAddress); err != nil {
 		return nil, err
@@ -225,16 +225,49 @@ func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
 		return nil, err
 	}
 
-	// Запись длины хэша
-	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.Hash))); err != nil {
-		return nil, err
-	}
+	// // Запись длины хэша
+	// if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.Hash))); err != nil {
+	// 	return nil, err
+	// }
 	// Запись самого хэша
 	if err := writeBytes(buf, output.Hash); err != nil {
 		return nil, err
 	}
 
 	return buf.Bytes(), nil
+}
+
+func DeserializeTransactionOutput(data []byte) (*TransactionOutput, error) {
+    buf := bytes.NewReader(data)
+    output := &TransactionOutput{}
+
+    // Чтение количества коинов
+    var value int32
+    if err := binary.Read(buf, binary.LittleEndian, &value); err != nil {
+        return nil, fmt.Errorf("error reading value: %v", err)
+    }
+    output.Value = int(value)
+
+    // Чтение адреса кошелька
+    recipientAddr, err := readBytes(buf)
+    if err != nil {
+        return nil, fmt.Errorf("error reading recipient address: %v", err)
+    }
+    output.RecipientAddress = recipientAddr
+
+    // Чтение времени создания
+    if err := binary.Read(buf, binary.LittleEndian, &output.TimeOfCreation); err != nil {
+        return nil, fmt.Errorf("error reading timestamp: %v", err)
+    }
+
+    // Чтение хэша
+    hash, err := readBytes(buf)
+    if err != nil {
+        return nil, fmt.Errorf("error reading hash: %v", err)
+    }
+    output.Hash = hash
+
+    return output, nil
 }
 
 /*

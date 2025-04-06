@@ -36,7 +36,7 @@ func NewServer(getOutputs getterFreeTransactionsOutputs, getBalance getterBalanc
 
 func (server *Server) Start() error {
 	// Создание слушателя для порта
-	lis, err := net.Listen("tcp", ":40001")
+	lis, err := net.Listen("tcp", ":40002")
 	if err != nil {
 		log.Printf("Can not open tcp port %v", err)
 		return err
@@ -48,7 +48,7 @@ func (server *Server) Start() error {
 	RegisterNodeServiceServer(server.grpcServer, server)
 
 	// Старт сервера
-	log.Println("Starting gRPC server on :40001")
+	log.Println("Starting gRPC server on :40002")
 	return server.grpcServer.Serve(server.listener)
 }
 

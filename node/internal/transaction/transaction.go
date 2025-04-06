@@ -6,9 +6,6 @@ import (
 	"log"
 	"time"
 	"encoding/binary"
-
-	"node/internal/block"
-	"node/internal/blockchain"
 )
 
 /*
@@ -63,17 +60,18 @@ func NewTransactionOutput(value int, address []byte, hc hashCalulator) (Transact
 TransactionOutputPool описывает интерфейс для
 пулла доступных выходов транзакций
 */
-type TransactionOutputPool interface {
-	/* Функция пробует заблокировать выход, false - выход заблокирован ранее, true - успешно заблокирован */
-	BlockOutput(output TransactionOutput) (bool, error)
-	/* Добавляет новых выход в пулл */
+type transactionOutputPool interface {
+	/* Функция пробует заблокировать выход */
+	BlockOutput(output TransactionOutput) error
+	/* Добавляет новык выходы в пулл */
 	AddOutputs(outputs []TransactionOutput) error
+	/* Возвращает список всех транзакций с незаблокированными выходами */
+	GetAllUnlockOutputs() ([]TransactionOutput, error)
 }
 
 /* Базисная транзакция с пустыми входами */
-func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, pool TransactionOutputPool) (*Transaction, error) {
+func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, pool transactionOutputPool) (*Transaction, error) {
 	input := TransactionInput{
-		//PreviousTransactionID: []byte{},
 		PreviousOutputHash:    []byte{},
 		PublicKey:             key,
 	}
@@ -84,19 +82,11 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 	}
 
 	transaction := &Transaction{
-		//ID:             []byte{},
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         []TransactionInput{input},
 		Outputs:        []TransactionOutput{output},
 	}
 
-	// bytes, err := transaction.TransactionToBytes()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
-	// }
-
-	// hash := hc.HashCalculate(bytes)
-	// transaction.ID = hash
 	err = pool.AddOutputs([]TransactionOutput{output})
 	if err != nil {
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
@@ -107,72 +97,54 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 	return transaction, nil
 }
 
-/* Обычная транзакция с переводом коинов */
+/*
+NewTransferTransaction обычная транзакция с переводом коинов
+
+Аргументы:
+  - int: amount сумма перевода
+  - []byte: recipientAddress адрес получателя
+  - []byte: senderAddress адрес отправителя
+  - hashCalulator: hc калькулятор хэшей
+  - transactionOutputPool: pool пулл транзакций
+
+Возвращает:
+  - *Transaction: сформированная транзакция
+  - error: ошибка
+*/
 func NewTransferTransaction(
 	amount int, recipientAddress, senderAddress []byte,
-	iter blockchain.Iterator[*block.Block], hc hashCalulator, pool TransactionOutputPool,
+	hc hashCalulator, pool transactionOutputPool,
 ) (*Transaction, error) {
 
 	// Входы транзакции и суммарный счет
 	inputs := make([]TransactionInput, 0)
 	totalInputValue := 0
 
-Metka:
-	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
-		currentBlock, err := iter.Current()
-		if err != nil {
-			return nil, fmt.Errorf("Searching transaction was failed: %v", err)
-		}
+	outputs, err := pool.GetAllUnlockOutputs()
+	if err != nil {
+		return nil, fmt.Errorf("Can not create transfer transaction - failed to get list of outputs: %v", err)
+	}
 
-		log.Printf("Хэш блока: %v\n Хэш предыдущего блока: %v\n\n", currentBlock.Hash, currentBlock.PrevBlockHash)
-
-		// // Расшифровываем информацию блока, то есть содержащуюся в нем транзакцию
-		// transactionBytes := currentValue.Data
-		// transaction := &Transaction{}
-		// err = transaction.BytesToTransaction(transactionBytes)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("Can not convert bytes to transaction: %v", err)
-		// }
-
-		// Расшифровываем информацию блока, извлекаем список транзакций
-		transactions, err := DeserializeTransactions(currentBlock.Data)
-		if err != nil {
-			return nil, fmt.Errorf("Can not convert bytes to transactions: %v", err)
-		}
-
-		// Обходим транзакции из блока
-		for _, transaction := range transactions {
-			// Обходим выходы транзакции аккумулируя выходы и баланс отправителя
-			for _, output := range transaction.Outputs {
-				// fmt.Printf(
-				// 	"Адрес пользователя: %v, Баланс пользоватя (Для рассматриваемого выхода транзакции) = %v\n",
-				// 	string(output.RecipientAddress), output.Value,
-				// )
-
-				if bytes.Equal(output.RecipientAddress, senderAddress) {
-					// Проверка доступности выхода
-					ok, _ := pool.BlockOutput(output)
-					if !ok {
-						continue
-					}
-
-					totalInputValue += output.Value
-					input := TransactionInput{
-						//PreviousTransactionID: transaction.ID,
-						PreviousOutputHash:    output.Hash,
-						PublicKey:             senderAddress,
-					}
-
-					inputs = append(inputs, input)
-				}
-
-				if totalInputValue >= amount {
-					break Metka
-				}
+	for _, output := range outputs {
+		if bytes.Equal(output.RecipientAddress, senderAddress) {
+			// Блокировка выхода
+			err := pool.BlockOutput(output)
+			if err != nil {
+				continue
 			}
+			// Аккумуляция суммы перевода
+			totalInputValue += output.Value
+			// Создание входа, который закроет рассматриваемый выход
+			input := TransactionInput{
+				PreviousOutputHash:    output.Hash,
+				PublicKey:             senderAddress,
+			}
+			inputs = append(inputs, input)
 		}
-		// Переход к следующему блоку в блокчейне
-		iter.Next()
+
+		if totalInputValue >= amount {
+			break
+		}
 	}
 
 	// Проверка накопленного баланса
@@ -180,13 +152,13 @@ Metka:
 		return nil, fmt.Errorf("Insufficient funds on balance")
 	}
 
-	outputs := make([]TransactionOutput, 0, 2)
+	outs := make([]TransactionOutput, 0, 2)
 
 	output1, err := NewTransactionOutput(amount, recipientAddress, hc)
 	if err != nil {
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
-	outputs = append(outputs, output1)
+	outs = append(outs, output1)
 	log.Printf("Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
 
 	// Если отправителю нужна сдача то добавляем  выход со сдачей
@@ -194,22 +166,15 @@ Metka:
 	if err != nil {
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
-	outputs = append(outputs, output2)
+	outs = append(outs, output2)
 	log.Printf("Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
 
 	// Создание структуры транзакции и подсчет хэша
 	transaction := &Transaction{
-		//ID:             []byte{},
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         inputs,
 		Outputs:        outputs,
 	}
-	// bytes, err := transaction.TransactionToBytes()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("Can not convert transaction to bytes: %v", err)
-	// }
-	// hash := hc.HashCalculate(bytes)
-	// transaction.ID = hash
 
 	// Добавление в пулл новых выходов
 	pool.AddOutputs(outputs)
@@ -270,6 +235,44 @@ func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
 	}
 
 	return buf.Bytes(), nil
+}
+
+func DeserializeTransactionOutput(data []byte) (*TransactionOutput, error) {
+    buf := bytes.NewReader(data)
+    output := &TransactionOutput{}
+
+    // Чтение количества коинов
+    var value int32
+    if err := binary.Read(buf, binary.LittleEndian, &value); err != nil {
+        return nil, fmt.Errorf("error reading value: %v", err)
+    }
+    output.Value = int(value)
+
+    // Чтение адреса кошелька
+    recipientAddr, err := readBytes(buf)
+    if err != nil {
+        return nil, fmt.Errorf("error reading recipient address: %v", err)
+    }
+    output.RecipientAddress = recipientAddr
+
+    // Чтение времени создания
+    if err := binary.Read(buf, binary.LittleEndian, &output.TimeOfCreation); err != nil {
+        return nil, fmt.Errorf("error reading timestamp: %v", err)
+    }
+
+    // Чтение хэша
+    hash, err := readBytes(buf)
+    if err != nil {
+        return nil, fmt.Errorf("error reading hash: %v", err)
+    }
+    output.Hash = hash
+
+    // Проверка полного прочтения буфера
+    if buf.Len() > 0 {
+        return nil, fmt.Errorf("%d unexpected trailing bytes", buf.Len())
+    }
+
+    return output, nil
 }
 
 /*

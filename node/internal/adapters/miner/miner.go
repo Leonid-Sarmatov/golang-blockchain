@@ -9,7 +9,7 @@ import (
 
 type powChecker interface {
 	/* Функция проверки доказательства работы*/
-	Chech(blk *block.Block) (bool, error)
+	Check(blk *block.Block) (bool, error)
 }
 
 type powSolver interface {

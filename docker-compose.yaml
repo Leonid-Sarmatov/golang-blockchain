@@ -13,23 +13,27 @@ services:
     networks:
       - my_network
 
-  mem-pool:
+  my-mem-pool:
     image: mem-pool:latest
-    container_name: my-mem-pool1
+    container_name: my-mem-pool
     depends_on:
       - nginx
     ports:
-      - "40001:40001"
+      - "8080:8080"
+    networks:
+      - my_network
 
-  node1:
+  my-node:
     image: blockchain-node:latest
-    container_name: my-node1
+    container_name: my-node
     depends_on:
       - nginx
     ports:
-      - "40001:40001"
+      - "40002:40002"
     volumes:
       - ./bolt1.db:/bolt.db
+    networks:
+      - my_network
 
   # server:
   #   image: golang_blockchain-server:latest
@@ -44,8 +48,8 @@ services:
   #     - my_network
 
   redis-master:
-    container_name: redis-master
-    hostname: redis-master
+    #container_name: redis-master
+    #hostname: redis-master
     image: redis:alpine
     command: redis-server --requirepass mypassword --masterauth mypassword
     ports:
@@ -73,6 +77,7 @@ services:
       - redis-master
 
   sentinel1:
+    container_name: sentinel1
     image: redis:alpine
     command: |
       sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2
@@ -88,6 +93,7 @@ services:
       - redis-master
 
   sentinel2:
+    container_name: sentinel2
     image: redis:alpine
     command: |
       sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2
@@ -103,6 +109,7 @@ services:
       - redis-master
 
   sentinel3:
+    container_name: sentinel3
     image: redis:alpine
     command: |
       sh -c "echo 'sentinel monitor mymaster 172.21.0.3 6379 2

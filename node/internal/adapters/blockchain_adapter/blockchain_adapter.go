@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 	"bytes"
-	"node/internal/adapters/pow"
-	"node/internal/adapters/storage"
+	//"node/internal/adapters/pow"
+	//"node/internal/adapters/storage"
 	"node/internal/block"
 	"node/internal/blockchain"
 	"node/internal/transaction"
@@ -23,8 +23,10 @@ type BlockchainAdapter struct {
 NewBlockchainAdapter конструктор для
 высокоуровневого адаптера над блокчейном
 */
-func NewBlockchainAdapter() *BlockchainAdapter {
-	return &BlockchainAdapter{}
+func NewBlockchainAdapter(b *blockchain.Blockchain) *BlockchainAdapter {
+	return &BlockchainAdapter{
+		blockchain: b,
+	}
 }
 
 /*
@@ -34,12 +36,12 @@ Init инициализация адаптера
   - error: ошибка
 */
 func (adapter *BlockchainAdapter) Init() error {
-	// Инициализация хранилища
-	storage := storage.NewBBoltDBDriver()
-	// Инициализация хэш калькулятора
-	ch := pow.NewHashCalculator()
-	// Вызыв конструктора блокчейна и инициализация
-	adapter.blockchain = blockchain.NewBlockchain(storage, ch)
+	// // Инициализация хранилища
+	// storage := storage.NewBBoltDBDriver()
+	// // Инициализация хэш калькулятора
+	// ch := pow.NewHashCalculator()
+	// // Вызыв конструктора блокчейна и инициализация
+	// adapter.blockchain = blockchain.NewBlockchain(storage, ch)
 	return nil
 }
 

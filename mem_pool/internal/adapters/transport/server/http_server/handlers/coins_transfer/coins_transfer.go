@@ -1,7 +1,7 @@
 package coinstransfer
 
 import (
-	"mem_pool/internal/transaction"
+	//"mem_pool/internal/transaction"
 	"mem_pool/internal/adapters/transport/server/http_server/msgs"
 	"net/http"
 	"log"
@@ -11,8 +11,8 @@ import (
 )
 
 type createCoinTransfer interface {
-	CreateCoinTransferTransaction(amount int, recipientAddress, senderAddress []byte) (*transaction.Transaction, error)
-	AddTransactionToProcessing(t *transaction.Transaction) error
+	CreateCoinTransferTransaction(amount int, recipientAddress, senderAddress []byte) error
+	// AddTransactionToProcessing(t *transaction.Transaction) error
 }
 
 
@@ -29,7 +29,7 @@ func NewCoinTransferHandler(cct createCoinTransfer) gin.HandlerFunc {
 			return
 		}
 
-		t, err := cct.CreateCoinTransferTransaction(req.Amount, []byte(req.RecipientKey), []byte(req.SenderKey))
+		err := cct.CreateCoinTransferTransaction(req.Amount, []byte(req.RecipientKey), []byte(req.SenderKey))
 		if err != nil {
 			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось сформировать транзакцию: %v", err)
 			log.Println(errMsg)
@@ -41,17 +41,17 @@ func NewCoinTransferHandler(cct createCoinTransfer) gin.HandlerFunc {
 			return
 		}
 
-		err = cct.AddTransactionToProcessing(t)
-		if err != nil {
-			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось добавить транзакцию в очередь на обработку: %v", err)
-			log.Println(errMsg)
+		// err = cct.AddTransactionToProcessing(t)
+		// if err != nil {
+		// 	errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось добавить транзакцию в очередь на обработку: %v", err)
+		// 	log.Println(errMsg)
 
-			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
-				Status:       "Error",
-				ErrorMessage: errMsg,
-			})
-			return
-		}
+		// 	ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{
+		// 		Status:       "Error",
+		// 		ErrorMessage: errMsg,
+		// 	})
+		// 	return
+		// }
 
 		ctx.JSON(http.StatusOK, &msgs.ResponseCoinsTransfer{
 			BaseResponse: msgs.BaseResponse{
