@@ -124,8 +124,10 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, 
 
 		// Отмена подсвета POW
 		select {
-		case <- cancel:
+		case <-cancel:
 			return -1, nil
+		default:
+			continue
 		}
 	}
 

@@ -14,7 +14,7 @@ import (
 )
 
 type RedisAdapter struct {
-	client *redis.Client
+	Client *redis.Client
 	mu     *sync.Mutex
 	ctx    context.Context
 	//grpc_client *grpcclient.Client
@@ -37,14 +37,14 @@ func (adapter *RedisAdapter) Init() error {
 	password := "mypassword"
 
 	// Создание клиента Redis через Failover
-	adapter.client = redis.NewFailoverClient(&redis.FailoverOptions{
+	adapter.Client = redis.NewFailoverClient(&redis.FailoverOptions{
 		MasterName:    masterName,
 		SentinelAddrs: sentinelAddrs,
 		Password:      password,
 	})
 
 	// Проверка подключения
-	if err := adapter.client.Ping(ctx).Err(); err != nil {
+	if err := adapter.Client.Ping(ctx).Err(); err != nil {
 		log.Printf("<redis.go> Не удалось подключиться к Redis: %v", err)
 		return err
 	}
@@ -62,7 +62,7 @@ func (adapter *RedisAdapter) AddOutputs(outs []transaction.TransactionOutput) er
 			return err
 		}
 
-		if err := adapter.client.Set(adapter.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
+		if err := adapter.Client.Set(adapter.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
 			return err
 		}
 	}
@@ -80,7 +80,7 @@ func (adapter *RedisAdapter) BlockOutput(out transaction.TransactionOutput) erro
 	// 	return err
 	// }
 
-	if err := adapter.client.Del(adapter.ctx, string(out.Hash)).Err(); err != nil {
+	if err := adapter.Client.Del(adapter.ctx, string(out.Hash)).Err(); err != nil {
 		return err
 	}
 	//}
@@ -99,10 +99,12 @@ func (adapter *RedisAdapter) AddTransaction(trn transaction.Transaction) error {
 		return err
 	}
 
-	err = adapter.client.Publish(adapter.ctx, "transactions1", buff.Bytes()).Err()
+	err = adapter.Client.Publish(adapter.ctx, "transactions1", buff.Bytes()).Err()
 	if err != nil {
 		return err
 	}
+
+	log.Printf("<redis_adapter.go> Транзакция успешно сформирована и отправлена в Redis")
 
 	return nil
 }
@@ -111,11 +113,11 @@ func (adapter *RedisAdapter) GetAllUnlockOutputs() ([]transaction.TransactionOut
 	result := make([]transaction.TransactionOutput, 0)
 
 	// Итерация по ключам с помощью SCAN
-	iter := adapter.client.Scan(adapter.ctx, 0, "*", 0).Iterator()
+	iter := adapter.Client.Scan(adapter.ctx, 0, "*", 0).Iterator()
 
 	for iter.Next(adapter.ctx) {
 		key := iter.Val()
-		val, err := adapter.client.Get(adapter.ctx, key).Result()
+		val, err := adapter.Client.Get(adapter.ctx, key).Result()
 
 		if err != nil {
 			if err == redis.Nil {
@@ -129,10 +131,10 @@ func (adapter *RedisAdapter) GetAllUnlockOutputs() ([]transaction.TransactionOut
 		if err != nil {
 			return nil, fmt.Errorf("Deserialization was failed: %v", err)
 		}
-		fmt.Printf("tr.Hash = %x\n", tr.Hash)
-		fmt.Printf("tr.RecipientAddress = %v\n", string(tr.RecipientAddress))
-		fmt.Printf("tr.TimeOfCreation = %v\n", tr.TimeOfCreation)
-		fmt.Printf("tr.Value = %v\n", tr.Value)
+		// fmt.Printf("tr.Hash = %x\n", tr.Hash)
+		// fmt.Printf("tr.RecipientAddress = %v\n", string(tr.RecipientAddress))
+		// fmt.Printf("tr.TimeOfCreation = %v\n", tr.TimeOfCreation)
+		// fmt.Printf("tr.Value = %v\n", tr.Value)
 		result = append(result, *tr)
 	}
 
@@ -148,15 +150,14 @@ func (adapter *RedisAdapter) GetBalance(address []byte) (int32, error) {
 	if err != nil {
 		return -1, fmt.Errorf("Can not get all outputs: %v", err)
 	}
-	fmt.Printf("len(outputs) = %v\n", len(outputs))
+	// fmt.Printf("len(outputs) = %v\n", len(outputs))
 
 	res := 0
 	for _, val := range outputs {
-		fmt.Printf("val.RecipientAddress = %v\n", string(val.RecipientAddress))
-		fmt.Printf("address = %v\n", string(address))
-		fmt.Printf("res = %v\n", res)
+		// fmt.Printf("val.RecipientAddress = %v\n", string(val.RecipientAddress))
+		// fmt.Printf("address = %v\n", string(address))
+		// fmt.Printf("res = %v\n", res)
 		if bytes.Equal(val.RecipientAddress, address) {
-			
 			res += val.Value
 		}
 	}

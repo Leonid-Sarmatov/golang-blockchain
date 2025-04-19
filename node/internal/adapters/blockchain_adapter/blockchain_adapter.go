@@ -1,10 +1,11 @@
 package blockchainadapter
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
-	"bytes"
+
 	//"node/internal/adapters/pow"
 	//"node/internal/adapters/storage"
 	"node/internal/block"
@@ -93,11 +94,14 @@ func (adapter *BlockchainAdapter) BlockSaveProcess(ctx context.Context, input <-
 		for {
 			select {
 			case blk := <-input:
+				log.Printf("<blockchain_adapter.go> Пришел блок на сохранение...")
 				// Чтение канала с блоками и запись блока на диск
 				err := adapter.blockchain.AddBlockToBlockchain(blk)
 				if err != nil {
+					log.Printf("<blockchain_adapter.go> Ошибка сохранения блока!")
 					output <- fmt.Errorf("Can not add block: %v", err)
 				}
+				log.Printf("<blockchain_adapter.go> Блок успешно записан в блокчейн на диске")
 			case <-ctx.Done():
 				// Корректное завершение функции
 				close(output)
@@ -128,11 +132,13 @@ func (adapter *BlockchainAdapter) AlreadyExistBlockFilter(ctx context.Context, i
 		for {
 			select {
 			case blk := <-input:
+				log.Printf("<blockchain_adapter.go> Пришел некий блок, наложение фильтра...")
 				// Проверка по хэшу, был ли этот блок записан только что
 				if adapter.blockchain.IsAlreadyExistBlock(blk) {
-					log.Printf("<blockchain_adapter.go> Блок только что был записан, пропускаем")
+					log.Printf("<blockchain_adapter.go> Блок только что был записан, игнорирование блока")
 					continue
 				}
+				log.Printf("<blockchain_adapter.go> Фильтр пройден, блок прошущен дальше")
 				output <- blk
 			case <-ctx.Done():
 				// Корректное завершение функции
@@ -154,6 +160,10 @@ func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 	outputs := make(map[string]*transaction.TransactionOutput)
 	inputs := make(map[string]interface{})
 
+	log.Printf("<blockchain_adapter.go> Начинается цикл по блокам...")
+	ok, err := iter.HasNext()
+	log.Printf("<blockchain_adapter.go> Проверка, есть ли блок в блокчейне: %v, ошибка: %v", ok, err)
+
 	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
 		currentBlock, err := iter.Current()
 		if err != nil {
@@ -166,10 +176,15 @@ func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 			return -1, fmt.Errorf("Can not convert bytes to transaction: %v", err)
 		}
 
+		log.Printf("<blockchain_adapter.go> Блок расшифрован. Количество транзакций в блоке: %v", len(transactions))
+
 		// Определяем входы входящие в блок и выходы выходящие из блока
 		ins := make(map[string]interface{})
 		outs := make(map[string]*transaction.TransactionOutput)
 		for _, tx := range transactions {
+
+			log.Printf("<blockchain_adapter.go> Время создания тразнакции: %v", tx.TimeOfCreation)
+
 			for _, out := range tx.Outputs {
 				outs[string(out.Hash)] = &out
 			}

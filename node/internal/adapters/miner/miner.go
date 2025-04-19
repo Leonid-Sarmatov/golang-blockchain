@@ -77,21 +77,26 @@ func (miner *Miner) TransactionListnerProcess(
 				copy(buffer, trns)
 				trnsCh <- buffer
 				trns = nil
+				log.Printf("<miner.go> Пришел сигнал на начало майнинга: пакет транзакций отправлен на обработку")
 			case trn := <-inputTransactions:
+				log.Printf("<miner.go> Пришла транзакция...")
 				// Если nil то переинициализируем
 				if trns == nil {
+					log.Printf("<miner.go> Пакет был нулевым, инициализация пакета (массива транзакций)")
 					trns = make([]*transaction.Transaction, 0)
 				}
+				// Аккумулируем транзакции в пакет
+				log.Printf("<miner.go> Сохранение транзакции в пакет (массив транзакций)")
+				trns = append(trns, trn)
 				// Если накопилось слишком много транзакций, начинаем майнить
 				if len(trns) >= 5 {
+					log.Printf("<miner.go> Транзакций накопилось слишком много: майнинг без сигнала")
 					// Копируем пакет транзакций в буфер, отправляем буфер на майнинг, и сбрасываем пакет
 					buffer := make([]*transaction.Transaction, len(trns))
 					copy(buffer, trns)
 					trnsCh <- buffer
 					trns = nil
 				}
-				// Аккумулируем транзакции в пакет
-				trns = append(trns, trn)
 			case <-ctx.Done():
 				// Обработка корректного завершения
 				return
@@ -127,12 +132,14 @@ func (miner *Miner) MiningProcess(
 		for {
 			select {
 			case pac := <-transactionPackets:
+				log.Printf("<miner.go> Получен пакет транзакций для майнига блока")
 				// Получение кончика блокчейна, который станет предудущим хэшом формируемого блока
 				tip, err := miner.Storage.BlockchainGetTip()
 				if err != nil {
 					log.Printf("<miner.go> Не удалось получить кончик! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
+				log.Printf("<miner.go> Кончик успешно получен!")
 
 				// Пакет транзакций это полезная нагрузка блока, трансформируем в байтовый слайс
 				slice, err := transaction.SerializeTransactions(pac)
@@ -140,18 +147,21 @@ func (miner *Miner) MiningProcess(
 					log.Printf("<miner.go> Не удалось сериализовать транзакции! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
+				log.Printf("<miner.go> Транзакции успешно сериализованы в байтовый слайс!")
 
 				blk, err := block.NewBlock(slice, tip)
 				if err != nil {
 					log.Printf("<miner.go> Не удалось сформировать новый блок! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
+				log.Printf("<miner.go> Сформирован блок с транзакциями!")
 
 				pow, err := miner.solver.Exec(blk, cancelMining)
 				if err != nil {
 					log.Printf("<miner.go> Ошибка при подсчете proof-of-work! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
+				log.Printf("<miner.go> Для сформированного блока успешно посчитан proof-of-work!")
 
 				if pow >= 0 {
 					blk.ProofOfWorkValue = pow

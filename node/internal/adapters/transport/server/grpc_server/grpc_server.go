@@ -59,6 +59,7 @@ func (server *Server) Stop() {
 
 func (server *Server) GetBalance(ctx context.Context, req *GetBalanceRequest) (*GetBalanceResponse, error) {
 	var response GetBalanceResponse
+	log.Printf("<grpc_server.go> Пришел запрос на получение балланса")
 	res, err := server.getBalance.GetBalance([]byte(req.Address))
 	if err != nil {
 		log.Printf("Не удалось выдать баланс кошелька %v, ошибка: %v", string(req.Address), err)

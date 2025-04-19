@@ -4,21 +4,26 @@ import (
 	// "bytes"
 	// "context"
 	// "fmt"
+	"log"
+	"time"
 	// "log"
+
 	"node/internal/adapters/blockchain_adapter"
 	"node/internal/adapters/miner"
 	"node/internal/adapters/pow"
 	"node/internal/adapters/storage"
 	"node/internal/adapters/transport/replicator"
-    "node/internal/adapters/transport/server/grpc_server"
+	"node/internal/adapters/transport/server/grpc_server"
 	"node/internal/blockchain"
 	"node/internal/core"
-	// "node/internal/transaction"
-	// "time"
+	//"node/internal/transaction"
+	//"time"
 	//"github.com/go-redis/redis/v8"
 )
 
 func main() {
+	time.Sleep(8 * time.Second)
+
 	hc := pow.NewHashCalculator()
 
 	s := storage.NewBBoltDBDriver()
@@ -28,16 +33,27 @@ func main() {
 	solver := pow.NewProofOfWorkSolver()
 
 	ba := blockchainadapter.NewBlockchainAdapter(b)
-	ba.Init()
+	_, err := ba.TryLoadSavedBlockchain()
+	if err != nil {
+		log.Fatalf("Не удалось загрузить блокчейн с диска: %v", err)
+	}
 
 	g := grpcserver.NewServer(ba, ba)
-	g.Start()
-
+	go func() {
+		g.Start()
+	}()
+	
 	m := miner.NewMiner(checker, solver, s)
-	m.Init()
+	err = m.Init()
+	if err != nil {
+		log.Fatalf("Не удалось инициализировать майнер: %v", err)
+	}
 
-	r := redisadapter.NewRedisAdapter()
-	r.Init()
+	r := replicator.NewRedisAdapter()
+	err = r.Init()
+	if err != nil {
+		log.Fatalf("Не удалось инициализировать redis: %v", err)
+	}
 
 	c := core.NewCore(r, r, r, ba, m)
 	c.Init()
@@ -64,7 +80,9 @@ func main() {
 	// 	},
 	// }
 
-	// redisConn := redisadapter.NewRedisAdapter()
+	// time.Sleep(2 * time.Second)
+
+	// redisConn := replicator.NewRedisAdapter()
 	// redisConn.Init()
 
 	// go func() {
@@ -75,6 +93,10 @@ func main() {
 	// 		fmt.Printf("Output Recipient: %s\n\n", tr.Outputs[0].RecipientAddress)
 	// 	}
 	// }()
+
+	// for {
+
+	// }
 
 	// // Отправляем транзакции каждую секунду
 	// ctx := context.Background()
@@ -96,7 +118,7 @@ func main() {
 	// 	}
 
 	// 	// Отправляем в Redis
-	// 	err := redisConn.RedisClient.Publish(ctx, "transactions", buf.Bytes()).Err()
+	// 	err := redisConn.RedisClient.Publish(ctx, "transactions1", buf.Bytes()).Err()
 	// 	if err != nil {
 	// 		log.Printf("Publish error: %v", err)
 	// 	} else {

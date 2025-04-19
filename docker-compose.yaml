@@ -31,7 +31,7 @@ services:
     ports:
       - "40002:40002"
     volumes:
-      - ./bolt1.db:/bolt.db
+      - ./bolt1.db:/bolt1.db
     networks:
       - my_network
 

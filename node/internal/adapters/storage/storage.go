@@ -21,7 +21,7 @@ type BBoltDBDriver struct {
 func NewBBoltDBDriver() *BBoltDBDriver {
 	var driver BBoltDBDriver
 
-	db, err := bbolt.Open("../bolt.db", 0600, nil)
+	db, err := bbolt.Open("../bolt1.db", 0600, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -186,6 +186,8 @@ func (driver *BBoltDBDriver) WriteNewBlock(newBlock *block.Block, lastHash []byt
 			return fmt.Errorf("Can not write hash from block: %v", err)
 		}
 
+		driver.Iterator()
+
 		return nil
 	})
 
@@ -220,7 +222,7 @@ func (driver *BBoltDBDriver) Iterator() {
 		tx.ForEach(func(name []byte, b *bbolt.Bucket) error {
 			log.Printf("Корзина: %v\n", name)
 			b.ForEach(func(k, v []byte) error {
-				log.Printf("  Ключь: %v, Значение: %v\n", k, v)
+				log.Printf("  Ключ: %v, Значение: %v\n", k, v)
 				return nil
 			})
 			return nil

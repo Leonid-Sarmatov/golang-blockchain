@@ -15,8 +15,8 @@ type hashCalulator interface {
 	HashCalculate(data []byte) []byte
 }
 
-/* 
-Интерфейс для итератора 
+/*
+Интерфейс для итератора
 */
 type Iterator[T any] interface {
 	HasNext() (bool, error)
@@ -40,8 +40,8 @@ type blockchainStorage interface {
 	GetExistBlockByHash(lastHash []byte) (*block.Block, error)
 }
 
-/* 
-Блокчейн 
+/*
+Блокчейн
 */
 type Blockchain struct {
 	Storage  blockchainStorage
@@ -100,7 +100,7 @@ func (bc *Blockchain) LoadSavedBlockchain() error {
 	}
 	bc.TipHash = tip
 
-	log.Printf("<blockchain.go> Блокчейн успешно инициализирован! Значение кончика: %v\n", tip)
+	log.Printf("<blockchain.go> Блокчейн успешно инициализирован! Значение кончика: %x", tip)
 
 	return nil
 }
@@ -144,14 +144,22 @@ func (bc *Blockchain) LoadSavedBlockchain() error {
 }*/
 
 func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
-	if bytes.Compare(b.PrevBlockHash, bc.TipHash) == 0 {
-		log.Printf("<blockchain.go> Хэши не совпали, блок не сохранен!")
+	if bytes.Compare(b.PrevBlockHash, bc.TipHash) != 0 {
+		log.Printf("<blockchain.go> Хэши не совпали, блок не сохранен! Значение кончика %x, а в блоке записан %x", bc.TipHash, b.PrevBlockHash)
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", "prev-block-hach not equal tip-hash")
 	}
 
-	err := bc.Storage.WriteNewBlock(b, bc.TipHash)
+	bs, err := b.SerializeBlock()
 	if err != nil {
-		log.Printf("<blockchain.go> Не удалось сохранить блок!")
+		log.Printf("<blockchain.go> Блок не удалось сериализовать")
+		return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
+	}
+
+	b.Hash = bc.HachCalc.HashCalculate(bs)
+
+	err = bc.Storage.WriteNewBlock(b, bc.TipHash)
+	if err != nil {
+		log.Printf("<blockchain.go> Не удалось сохранить блок: %v", err)
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
 	}
 

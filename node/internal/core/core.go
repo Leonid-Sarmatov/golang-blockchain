@@ -120,5 +120,8 @@ func (core *Core) Init() error {
 	// Запуск процесса отправки блоков в сеть
 	core.blockTransmitter.BlockTransmitterProcess(context.Background(), resBlChan, "blocks1")
 
+	// Запуск процесса сохранения блоков на диск
+	core.BlockSaveProcess(context.Background(), blSaveChan)
+
 	return nil
 }

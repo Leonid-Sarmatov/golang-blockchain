@@ -1,8 +1,9 @@
-package redisadapter
+package replicator
 
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"node/internal/block"
 	"node/internal/transaction"
@@ -70,27 +71,30 @@ func (r *RedisReplicator) TransactionReceiverProcess(transactionSubName string) 
 	// Фоновый процесс записи поступающих транзакций в канал
 	go func() {
 		defer close(output)
+		fmt.Printf("<replicator.go> Запуск фонового процесса...")
 
 		for {
 			// Подключение к нужному PubSub
 			pubsub := r.RedisClient.Subscribe(context.Background(), transactionSubName)
-			defer pubsub.Close()
+			//defer pubsub.Close()
 			ch := pubsub.Channel()
 
 			// Чтение канала с сообщениями
 			for msg := range ch {
+				log.Printf("<replicator.go> От Redis пришло сообщение, распаковываю...")
 				buf := bytes.NewReader([]byte(msg.Payload))
 				tr, err := transaction.DeserializeTransaction(buf)
 				if err != nil {
 					log.Printf("Can not deserialization transaction: %v", err)
 					break
 				}
+				log.Printf("<replicator.go> Транзакция принята!")
 				output <- &tr
 			}
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
 			log.Println("PubSub channel with transactions closed. Reconnecting...")
-            time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -132,7 +136,7 @@ func (r *RedisReplicator) BlockReceiverProcess(blockSubName string) chan *block.
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
 			log.Println("PubSub channel with blocks closed. Reconnecting...")
-            time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -159,7 +163,7 @@ func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-ch
 	go func() {
 		for {
 			select {
-			case blk := <- blks:
+			case blk := <-blks:
 				// Отправка созданного данным узлом блока в сеть
 				msg, err := blk.SerializeBlock()
 				if err != nil {
@@ -168,10 +172,10 @@ func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-ch
 					continue
 				}
 				r.RedisClient.Publish(context.Background(), blockSubName, string(msg))
-			case <- ctx.Done():
+			case <-ctx.Done():
 				// Корректное завершение работы
 				close(outputs)
-				return 
+				return
 			}
 		}
 	}()
