@@ -82,7 +82,7 @@ func (server *Server) GetFreeTransactionsOutputs(ctx context.Context, req *GetFr
 			Value: int32(val.Value),
 			RecipientAddress: string(val.RecipientAddress),
 			TimeOfCreation: val.TimeOfCreation,
-			Hash: string(val.Hash),
+			Hash: val.Hash,
 		}
 	}
 	return &response, nil

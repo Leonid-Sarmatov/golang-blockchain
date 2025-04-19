@@ -22,7 +22,7 @@ import (
 )
 
 func main() {
-	time.Sleep(8 * time.Second)
+	time.Sleep(6 * time.Second)
 
 	hc := pow.NewHashCalculator()
 

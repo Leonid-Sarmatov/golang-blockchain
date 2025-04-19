@@ -28,7 +28,7 @@ message TransactionOutput {
     int32 value = 1;
     string recipient_address = 2;
     int64 time_of_creation = 3;
-    string hash = 4;
+    bytes hash = 4;
 }
 
 message GetFreeTransactionsOutputsResponse {

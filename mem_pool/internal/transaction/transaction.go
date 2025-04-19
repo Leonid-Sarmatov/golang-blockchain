@@ -64,9 +64,9 @@ type transactionOutputPool interface {
 	/* Функция пробует заблокировать выход */
 	BlockOutput(output TransactionOutput) error
 	/* Добавляет новык выходы в пулл */
-	AddOutputs(outputs []TransactionOutput) error
+	AddOutput(output TransactionOutput) error
 	/* Возвращает список всех транзакций с незаблокированными выходами */
-	GetAllUnlockOutputs() ([]TransactionOutput, error)
+	GetAllUnlockOutputs() ([]*TransactionOutput, error)
 }
 
 /* Базисная транзакция с пустыми входами */
@@ -87,7 +87,7 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 		Outputs:        []TransactionOutput{output},
 	}
 
-	err = pool.AddOutputs([]TransactionOutput{output})
+	err = pool.AddOutput(output)
 	if err != nil {
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
 	}
@@ -128,7 +128,7 @@ func NewTransferTransaction(
 	for _, output := range outputs {
 		if bytes.Equal(output.RecipientAddress, senderAddress) {
 			// Блокировка выхода
-			err := pool.BlockOutput(output)
+			err := pool.BlockOutput(*output)
 			if err != nil {
 				continue
 			}
@@ -173,11 +173,12 @@ func NewTransferTransaction(
 	transaction := &Transaction{
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         inputs,
-		Outputs:        outputs,
+		Outputs:        outs,
 	}
 
 	// Добавление в пулл новых выходов
-	pool.AddOutputs(outputs)
+	pool.AddOutput(output1)
+	pool.AddOutput(output2)
 
 	return transaction, nil
 }

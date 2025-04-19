@@ -68,18 +68,20 @@ func (c *Client) GetFreeTransactionsOutputs() ([]*transaction.TransactionOutput,
 	response, err := c.client.GetFreeTransactionsOutputs(context.Background(), &GetFreeTransactionsOutputsRequest{
 		MaxOutputs: 32,
 	}) 
+
 	if err != nil {
-		log.Printf("Не удалось запросить свободные выходы, ошибка: %v", err)
+		log.Printf("<grpc_client.go> Не удалось запросить свободные выходы, ошибка: %v", err)
 		return nil, err
 	}
-	log.Printf("Свободные выходы успешно получены")
+	log.Printf("<grpc_client.go> Свободные выходы успешно получены")
+
 	res := make([]*transaction.TransactionOutput, len(response.Outputs))
 	for i, val := range response.Outputs {
 		res[i] = &transaction.TransactionOutput{
 			Value: int(val.Value),
 			RecipientAddress: []byte(val.RecipientAddress),
 			TimeOfCreation: val.TimeOfCreation,
-			Hash: []byte(val.Hash),
+			Hash: val.Hash,
 		}
 	}
 	return res, nil

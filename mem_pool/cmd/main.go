@@ -22,7 +22,7 @@ import (
 
 func main() {
 
-	time.Sleep(4 * time.Second)
+	time.Sleep(8 * time.Second)
 
 	hc := pow.NewHashCalculator()
 
@@ -31,6 +31,18 @@ func main() {
 
 	rds := redisadapter.NewRedisAdapter()
 	rds.Init()
+
+	outs, err := c.GetFreeTransactionsOutputs()
+	if err != nil {
+		log.Printf("<main.go> Не узалось получить список транзакций от узла сети")
+	}
+
+	for _, out := range outs {
+		err = rds.AddOutput(*out)
+		if err != nil {
+			log.Printf("<main.go> Не удалось добавить свободый выход транзакции, полученный от узла сети")
+		}
+	}
 
 	core := core.NewCore(rds, rds, rds, hc, c)
 	core.Init()

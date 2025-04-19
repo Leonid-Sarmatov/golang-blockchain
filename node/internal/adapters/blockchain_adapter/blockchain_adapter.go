@@ -94,11 +94,11 @@ func (adapter *BlockchainAdapter) BlockSaveProcess(ctx context.Context, input <-
 		for {
 			select {
 			case blk := <-input:
-				log.Printf("<blockchain_adapter.go> Пришел блок на сохранение...")
+				log.Printf("<blockchain_adapter.go> Получен блок для сохранения на диск")
 				// Чтение канала с блоками и запись блока на диск
 				err := adapter.blockchain.AddBlockToBlockchain(blk)
 				if err != nil {
-					log.Printf("<blockchain_adapter.go> Ошибка сохранения блока!")
+					log.Printf("<blockchain_adapter.go> Ошибка сохранения блока на диск: %v", err)
 					output <- fmt.Errorf("Can not add block: %v", err)
 				}
 				log.Printf("<blockchain_adapter.go> Блок успешно записан в блокчейн на диске")
@@ -132,7 +132,7 @@ func (adapter *BlockchainAdapter) AlreadyExistBlockFilter(ctx context.Context, i
 		for {
 			select {
 			case blk := <-input:
-				log.Printf("<blockchain_adapter.go> Пришел некий блок, наложение фильтра...")
+				log.Printf("<blockchain_adapter.go> Получен блок, сравнение с последним блоком в блокчейне")
 				// Проверка по хэшу, был ли этот блок записан только что
 				if adapter.blockchain.IsAlreadyExistBlock(blk) {
 					log.Printf("<blockchain_adapter.go> Блок только что был записан, игнорирование блока")
@@ -151,6 +151,17 @@ func (adapter *BlockchainAdapter) AlreadyExistBlockFilter(ctx context.Context, i
 	return output
 }
 
+/*
+GetBalance подсчитывает баланс кошелька,
+итерируясь по всему сохраненному блокчейну
+
+Аргументы:
+  - address []byte: адрес кошелька
+
+Возвращает:
+  - int32: баланс кошелька
+  - error: ошибка
+*/
 func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 	iter, err := adapter.blockchain.CreateIterator()
 	if err != nil {
@@ -160,9 +171,9 @@ func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 	outputs := make(map[string]*transaction.TransactionOutput)
 	inputs := make(map[string]interface{})
 
-	log.Printf("<blockchain_adapter.go> Начинается цикл по блокам...")
-	ok, err := iter.HasNext()
-	log.Printf("<blockchain_adapter.go> Проверка, есть ли блок в блокчейне: %v, ошибка: %v", ok, err)
+	// log.Printf("<blockchain_adapter.go> Начинается цикл по блокам...")
+	// ok, err := iter.HasNext()
+	// log.Printf("<blockchain_adapter.go> Проверка, есть ли блок в блокчейне: %v, ошибка: %v", ok, err)
 
 	for ok, _ := iter.HasNext(); ok; ok, _ = iter.HasNext() {
 		currentBlock, err := iter.Current()
@@ -182,9 +193,6 @@ func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 		ins := make(map[string]interface{})
 		outs := make(map[string]*transaction.TransactionOutput)
 		for _, tx := range transactions {
-
-			log.Printf("<blockchain_adapter.go> Время создания тразнакции: %v", tx.TimeOfCreation)
-
 			for _, out := range tx.Outputs {
 				outs[string(out.Hash)] = &out
 			}
@@ -227,6 +235,14 @@ func (adapter *BlockchainAdapter) GetBalance(address []byte) (int32, error) {
 	return int32(res), nil
 }
 
+/*
+GetFreeTransactionsOutputs находит все свободные
+выходы транзакций, итерируясь по всему блокчейну на диске
+
+Возвращает:
+  - []*transaction.TransactionOutput: слайс транзакций
+  - error: ошибка
+*/
 func (adapter *BlockchainAdapter) GetFreeTransactionsOutputs() ([]*transaction.TransactionOutput, error) {
 	iter, err := adapter.blockchain.CreateIterator()
 	if err != nil {

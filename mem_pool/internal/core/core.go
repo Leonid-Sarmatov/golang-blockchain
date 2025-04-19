@@ -2,7 +2,7 @@ package core
 
 import (
 	"log"
-	grpcclient "mem_pool/internal/adapters/transport/client/grpc_client"
+	"mem_pool/internal/adapters/transport/client/grpc_client"
 	"mem_pool/internal/transaction"
 )
 
@@ -10,9 +10,9 @@ type transactionOutputPool interface {
 	/* Функция пробует заблокировать выход */
 	BlockOutput(output transaction.TransactionOutput) error
 	/* Добавляет новык выходы в пулл */
-	AddOutputs(outputs []transaction.TransactionOutput) error
+	AddOutput(output transaction.TransactionOutput) error
 	/* Возвращает список всех транзакций с незаблокированными выходами */
-	GetAllUnlockOutputs() ([]transaction.TransactionOutput, error)
+	GetAllUnlockOutputs() ([]*transaction.TransactionOutput, error)
 }
 
 // type addOutputs interface {

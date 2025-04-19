@@ -52,11 +52,11 @@ func (adapter *RedisAdapter) Init() error {
 	return nil
 }
 
-func (adapter *RedisAdapter) AddOutputs(outs []transaction.TransactionOutput) error {
+func (adapter *RedisAdapter) AddOutput(out transaction.TransactionOutput) error {
 	adapter.mu.Lock()
 	defer adapter.mu.Unlock()
 
-	for _, out := range outs {
+	//for _, out := range outs {
 		outBytes, err := transaction.SerializeTransactionOutput(&out)
 		if err != nil {
 			return err
@@ -65,7 +65,7 @@ func (adapter *RedisAdapter) AddOutputs(outs []transaction.TransactionOutput) er
 		if err := adapter.Client.Set(adapter.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
 			return err
 		}
-	}
+	//}
 
 	return nil
 }
@@ -109,8 +109,16 @@ func (adapter *RedisAdapter) AddTransaction(trn transaction.Transaction) error {
 	return nil
 }
 
-func (adapter *RedisAdapter) GetAllUnlockOutputs() ([]transaction.TransactionOutput, error) {
-	result := make([]transaction.TransactionOutput, 0)
+/*
+GetAllUnlockOutputs находит все свободные
+выходы транзакций запрашивая их из redis
+
+Возвращает:
+  - []*transaction.TransactionOutput: слайс транзакций
+  - error: ошибка
+*/
+func (adapter *RedisAdapter) GetAllUnlockOutputs() ([]*transaction.TransactionOutput, error) {
+	result := make([]*transaction.TransactionOutput, 0)
 
 	// Итерация по ключам с помощью SCAN
 	iter := adapter.Client.Scan(adapter.ctx, 0, "*", 0).Iterator()
@@ -135,7 +143,7 @@ func (adapter *RedisAdapter) GetAllUnlockOutputs() ([]transaction.TransactionOut
 		// fmt.Printf("tr.RecipientAddress = %v\n", string(tr.RecipientAddress))
 		// fmt.Printf("tr.TimeOfCreation = %v\n", tr.TimeOfCreation)
 		// fmt.Printf("tr.Value = %v\n", tr.Value)
-		result = append(result, *tr)
+		result = append(result, tr)
 	}
 
 	if err := iter.Err(); err != nil {
