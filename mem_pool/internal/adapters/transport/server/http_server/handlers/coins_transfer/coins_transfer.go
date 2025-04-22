@@ -31,7 +31,7 @@ func NewCoinTransferHandler(cct createCoinTransfer) gin.HandlerFunc {
 
 		err := cct.CreateCoinTransferTransaction(req.Amount, []byte(req.RecipientKey), []byte(req.SenderKey))
 		if err != nil {
-			errMsg := fmt.Sprintf("Ошибка обработки запроса, не удалось сформировать транзакцию: %v", err)
+			errMsg := fmt.Sprintf("<coins_transfer.go> Ошибка обработки запроса, не удалось сформировать транзакцию: %v", err)
 			log.Println(errMsg)
 
 			ctx.JSON(http.StatusInternalServerError, &msgs.BaseResponse{

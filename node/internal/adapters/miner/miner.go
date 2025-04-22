@@ -22,16 +22,38 @@ type blockchainStorage interface {
 	BlockchainGetTip() ([]byte, error)
 }
 
+type hashCalculator interface {
+	/* Функция получения хэша */
+	HashCalculate(data []byte) []byte
+}
+
+/*
+TransactionOutputPool описывает интерфейс для
+пулла доступных выходов транзакций
+*/
+type transactionOutputPool interface {
+	/* Функция пробует заблокировать выход */
+	BlockOutput(output transaction.TransactionOutput) error
+	/* Добавляет новык выходы в пулл */
+	AddOutput(output transaction.TransactionOutput) error
+	/* Возвращает список всех транзакций с незаблокированными выходами */
+	GetAllUnlockOutputs() ([]*transaction.TransactionOutput, error)
+}
+
 type Miner struct {
 	checker powChecker
 	solver  powSolver
+	pool transactionOutputPool
+	calc hashCalculator
 	Storage blockchainStorage
 }
 
-func NewMiner(checker powChecker, solver powSolver, storage blockchainStorage) *Miner {
+func NewMiner(checker powChecker, solver powSolver, storage blockchainStorage, pool transactionOutputPool, calc hashCalculator) *Miner {
 	return &Miner{
 		checker: checker,
 		solver:  solver,
+		pool: pool,
+		calc: calc,
 		Storage: storage,
 	}
 }
@@ -54,6 +76,42 @@ TransactionListnerProcess создает процесс обработки пр�
   - chan []*transaction.Transaction: канал с пакетами дляформирования блоков
 */
 func (miner *Miner) TransactionListnerProcess(
+	ctx context.Context,
+	inputTransactions <-chan *transaction.Transaction,
+	startMining <-chan int,
+) chan []*transaction.Transaction {
+	// Канал пакетом транзакций для будущего блока
+	trnsCh := make(chan []*transaction.Transaction)
+
+	// Фоновый процесс получения транзакций и отправки их на майнинг
+	go func() {
+		for {
+			select {
+			case trn := <-inputTransactions:
+				log.Printf("<miner.go> Пришла транзакция...")
+				// Создание базисной транзакции для вознаграждения данного майнера
+				trnR, err := transaction.NewCoinbaseTransaction(
+					1, []byte("PetrovichMiner"), []byte("PetrovichMiner"), 
+					miner.calc, miner.pool,
+				)
+				if err != nil {
+					log.Printf("<miner.go> Не удалось создать транзакцию аознаграждения майнера")
+					continue
+				}
+				// Отправка транзакции от мем-пулла и транзакции вознаграждения на майнинг
+				log.Printf("<miner.go> Отправка транзакций на майнинг нового блока")
+				trnsCh <- []*transaction.Transaction{trn, trnR}
+
+			case <-ctx.Done():
+				// Обработка корректного завершения
+				return
+			}
+		}
+	}()
+
+	return trnsCh
+}
+/*func (miner *Miner) TransactionListnerProcess(
 	ctx context.Context,
 	inputTransactions <-chan *transaction.Transaction,
 	startMining <-chan int,
@@ -89,7 +147,7 @@ func (miner *Miner) TransactionListnerProcess(
 				log.Printf("<miner.go> Сохранение транзакции в пакет (массив транзакций)")
 				trns = append(trns, trn)
 				// Если накопилось слишком много транзакций, начинаем майнить
-				if len(trns) >= 5 {
+				if len(trns) >= 1 {
 					log.Printf("<miner.go> Транзакций накопилось слишком много: майнинг без сигнала")
 					// Копируем пакет транзакций в буфер, отправляем буфер на майнинг, и сбрасываем пакет
 					buffer := make([]*transaction.Transaction, len(trns))
@@ -105,7 +163,7 @@ func (miner *Miner) TransactionListnerProcess(
 	}()
 
 	return trnsCh
-}
+}*/
 
 /*
 MiningProcess создает процесс создания, майнинга нового блока
@@ -179,116 +237,6 @@ func (miner *Miner) MiningProcess(
 
 	return blks
 }
-
-/*func (miner *Miner) Mining(
-	ctx context.Context,
-	inputTransactions <-chan *transaction.Transaction,
-	startMining <-chan int,
-	abortMining <-chan int,
-) chan *block.Block {
-	// Канал с готовыми блоками
-	outputCh := make(chan *block.Block)
-
-	// Канал пакетом транзакций для будущего блока
-	trnsCh := make(chan []*transaction.Transaction)
-
-	// Канал старта майнинга надо разветвить
-	starts := Tee(startMining, 2)
-
-	// // Контексты для корректного завершения работы
-	ctx1, close1 := context.WithCancel(context.Background())
-	ctx2, close2 := context.WithCancel(context.Background())
-
-	// Фоновый процесс получения транзакций и отправки их на майнинг
-	go func() {
-		// Пакет транзакций
-		trns := make([]*transaction.Transaction, 0)
-		for {
-			select {
-			case <-starts[0]:
-				// Не формируем пакет, если транзакций нет вообще
-				if len(trns) == 0 {
-					continue
-				}
-				// Копируем пакет транзакций в буфер, отправляем буфер на майнинг, и сбрасываем пакет
-				buffer := make([]*transaction.Transaction, len(trns))
-				copy(buffer, trns)
-				trnsCh <- buffer
-				trns = nil
-			case trn := <-inputTransactions:
-				// Если nil то переинициализируем
-				if trns == nil {
-					trns = make([]*transaction.Transaction, 0)
-				}
-				// Аккумулируем транзакции в пакет
-				trns = append(trns, trn)
-			case <-ctx1.Done():
-				// Обработка корректного завершения
-				return
-			}
-		}
-	}()
-
-	// Фоновый процесс формирования блока из пакета транзакций
-	go func() {
-		for {
-			select {
-			case <-starts[1]:
-				// Получение кончика блокчейна, который станет предудущим хэшом формируемого блока
-				tip, err := miner.Storage.BlockchainGetTip()
-				if err != nil {
-					log.Printf("<miner.go> Не удалось получить кончик! Майнинг отменен. Ошибка: %v", err)
-					continue
-				}
-
-				// Пакет транзакций это полезная нагрузка блока, трансформируем в байтовый слайс
-				slice, err := transaction.SerializeTransactions(<-trnsCh)
-				if err != nil {
-					log.Printf("<miner.go> Не удалось сериализовать транзакции! Майнинг отменен. Ошибка: %v", err)
-					continue
-				}
-
-				blk, err := block.NewBlock(slice, tip)
-				if err != nil {
-					log.Printf("<miner.go> Не удалось сформировать новый блок! Майнинг отменен. Ошибка: %v", err)
-					continue
-				}
-
-				pow, err := miner.solver.Exec(blk, abortMining)
-				if err != nil {
-					log.Printf("<miner.go> Ошибка при подсчете proof-of-work! Майнинг отменен. Ошибка: %v", err)
-					continue
-				}
-
-				if pow >= 0 {
-					blk.ProofOfWorkValue = pow
-					outputCh <- blk
-					log.Printf("<miner.go> Блок успешно создан. Ожидает запись и отправку в сеть")
-				} else {
-					log.Printf("<miner.go> Майнинг отменен. Блок никуда не пойдет")
-				}
-			case <-ctx2.Done():
-				// Обработка корректного завершения
-				return
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				// Корректно завершаем все процессы
-				close1()
-				close2()
-				close(outputCh)
-				close(trnsCh)
-			}
-		}
-	}()
-
-	return outputCh
-}*/
 
 func Tee[T any](input <-chan T, n int) []chan T {
 	outputs := make([]chan T, n)

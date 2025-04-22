@@ -64,9 +64,9 @@ type transactionOutputPool interface {
 	/* Функция пробует заблокировать выход */
 	BlockOutput(output TransactionOutput) error
 	/* Добавляет новык выходы в пулл */
-	AddOutputs(outputs []TransactionOutput) error
+	AddOutput(output TransactionOutput) error
 	/* Возвращает список всех транзакций с незаблокированными выходами */
-	GetAllUnlockOutputs() ([]TransactionOutput, error)
+	GetAllUnlockOutputs() ([]*TransactionOutput, error)
 }
 
 /* Базисная транзакция с пустыми входами */
@@ -87,12 +87,12 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 		Outputs:        []TransactionOutput{output},
 	}
 
-	err = pool.AddOutputs([]TransactionOutput{output})
+	err = pool.AddOutput(output)
 	if err != nil {
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
 	}
 
-	log.Printf("Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
+	log.Printf("<trnsaction.go> Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
 
 	return transaction, nil
 }
@@ -128,7 +128,7 @@ func NewTransferTransaction(
 	for _, output := range outputs {
 		if bytes.Equal(output.RecipientAddress, senderAddress) {
 			// Блокировка выхода
-			err := pool.BlockOutput(output)
+			err := pool.BlockOutput(*output)
 			if err != nil {
 				continue
 			}
@@ -159,7 +159,7 @@ func NewTransferTransaction(
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
 	outs = append(outs, output1)
-	log.Printf("Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
+	log.Printf("<transaction.go> Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
 
 	// Если отправителю нужна сдача то добавляем  выход со сдачей
 	output2, err := NewTransactionOutput(totalInputValue-amount, senderAddress, hc)
@@ -167,17 +167,18 @@ func NewTransferTransaction(
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
 	outs = append(outs, output2)
-	log.Printf("Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
+	log.Printf("<transaction.go> Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
 
 	// Создание структуры транзакции и подсчет хэша
 	transaction := &Transaction{
 		TimeOfCreation: time.Now().Unix(),
 		Inputs:         inputs,
-		Outputs:        outputs,
+		Outputs:        outs,
 	}
 
 	// Добавление в пулл новых выходов
-	pool.AddOutputs(outputs)
+	pool.AddOutput(output1)
+	pool.AddOutput(output2)
 
 	return transaction, nil
 }
@@ -211,10 +212,10 @@ func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
 		return nil, err
 	}
 
-	// Запись длины адреса кошелька
-	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.RecipientAddress))); err != nil {
-		return nil, err
-	}
+	// // Запись длины адреса кошелька
+	// if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.RecipientAddress))); err != nil {
+	// 	return nil, err
+	// }
 	// Запись самого адреса кошелька
 	if err := writeBytes(buf, output.RecipientAddress); err != nil {
 		return nil, err
@@ -225,10 +226,10 @@ func SerializeTransactionOutput(output *TransactionOutput) ([]byte, error) {
 		return nil, err
 	}
 
-	// Запись длины хэша
-	if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.Hash))); err != nil {
-		return nil, err
-	}
+	// // Запись длины хэша
+	// if err := binary.Write(buf, binary.LittleEndian, uint32(len(output.Hash))); err != nil {
+	// 	return nil, err
+	// }
 	// Запись самого хэша
 	if err := writeBytes(buf, output.Hash); err != nil {
 		return nil, err
@@ -266,11 +267,6 @@ func DeserializeTransactionOutput(data []byte) (*TransactionOutput, error) {
         return nil, fmt.Errorf("error reading hash: %v", err)
     }
     output.Hash = hash
-
-    // Проверка полного прочтения буфера
-    if buf.Len() > 0 {
-        return nil, fmt.Errorf("%d unexpected trailing bytes", buf.Len())
-    }
 
     return output, nil
 }

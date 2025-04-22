@@ -38,21 +38,21 @@ func main() {
 		log.Fatalf("Не удалось загрузить блокчейн с диска: %v", err)
 	}
 
+	r := replicator.NewRedisAdapter()
+	err = r.Init()
+	if err != nil {
+		log.Fatalf("Не удалось инициализировать redis: %v", err)
+	}
+
 	g := grpcserver.NewServer(ba, ba)
 	go func() {
 		g.Start()
 	}()
 	
-	m := miner.NewMiner(checker, solver, s)
+	m := miner.NewMiner(checker, solver, s, r, hc)
 	err = m.Init()
 	if err != nil {
 		log.Fatalf("Не удалось инициализировать майнер: %v", err)
-	}
-
-	r := replicator.NewRedisAdapter()
-	err = r.Init()
-	if err != nil {
-		log.Fatalf("Не удалось инициализировать redis: %v", err)
 	}
 
 	c := core.NewCore(r, r, r, ba, m)

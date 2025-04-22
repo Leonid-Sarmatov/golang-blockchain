@@ -7,12 +7,15 @@ import (
 	"log"
 	"node/internal/block"
 	"node/internal/transaction"
+	"sync"
 	"time"
 
 	"github.com/go-redis/redis/v8"
 )
 
 type RedisReplicator struct {
+	ctx context.Context
+	mu *sync.Mutex
 	RedisClient *redis.Client
 }
 
@@ -31,8 +34,6 @@ Init инициализирует подключение к redis и
   - error: ошибка
 */
 func (r *RedisReplicator) Init() error {
-	ctx := context.Background()
-
 	// Конфигурация Sentinel
 	sentinelAddrs := []string{"sentinel1:26379", "sentinel2:26380", "sentinel3:26381"}
 	masterName := "mymaster"
@@ -45,14 +46,98 @@ func (r *RedisReplicator) Init() error {
 		Password:      password,
 	})
 
+	// Создание контекста
+	r.ctx = context.Background()
+	r.mu = &sync.Mutex{}
+
 	// Проверка подключения
-	if err := r.RedisClient.Ping(ctx).Err(); err != nil {
+	if err := r.RedisClient.Ping(r.ctx).Err(); err != nil {
 		log.Printf("Redis connect error: %v", err)
 		return err
 	}
 	log.Printf("Successful connect to redis sentinel!")
 
 	return nil
+}
+
+func (r *RedisReplicator) AddOutput(out transaction.TransactionOutput) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	//for _, out := range outs {
+		outBytes, err := transaction.SerializeTransactionOutput(&out)
+		if err != nil {
+			return err
+		}
+
+		if err := r.RedisClient.Set(r.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
+			return err
+		}
+	//}
+
+	return nil
+}
+
+func (r *RedisReplicator) BlockOutput(out transaction.TransactionOutput) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	//for _, out := range outs {
+	// outBytes, err := transaction.SerializeTransactionOutput(&out)
+	// if err != nil {
+	// 	return err
+	// }
+
+	if err := r.RedisClient.Del(r.ctx, string(out.Hash)).Err(); err != nil {
+		return err
+	}
+	//}
+
+	return nil
+}
+
+/*
+GetAllUnlockOutputs находит все свободные
+выходы транзакций запрашивая их из redis
+
+Возвращает:
+  - []*transaction.TransactionOutput: слайс транзакций
+  - error: ошибка
+*/
+func (r *RedisReplicator) GetAllUnlockOutputs() ([]*transaction.TransactionOutput, error) {
+	result := make([]*transaction.TransactionOutput, 0)
+
+	// Итерация по ключам с помощью SCAN
+	iter := r.RedisClient.Scan(r.ctx, 0, "*", 0).Iterator()
+
+	for iter.Next(r.ctx) {
+		key := iter.Val()
+		val, err := r.RedisClient.Get(r.ctx, key).Result()
+
+		if err != nil {
+			if err == redis.Nil {
+				// Пропускаем ключи без значения (например, списки/хеши)
+				continue
+			}
+			return nil, fmt.Errorf("Get val from redis was failed: %v", err)
+		}
+
+		tr, err := transaction.DeserializeTransactionOutput([]byte(val))
+		if err != nil {
+			return nil, fmt.Errorf("Deserialization was failed: %v", err)
+		}
+		// fmt.Printf("tr.Hash = %x\n", tr.Hash)
+		// fmt.Printf("tr.RecipientAddress = %v\n", string(tr.RecipientAddress))
+		// fmt.Printf("tr.TimeOfCreation = %v\n", tr.TimeOfCreation)
+		// fmt.Printf("tr.Value = %v\n", tr.Value)
+		result = append(result, tr)
+	}
+
+	if err := iter.Err(); err != nil {
+		return nil, fmt.Errorf("Iterator from redis was failed: %v", err)
+	}
+
+	return result, nil
 }
 
 /*

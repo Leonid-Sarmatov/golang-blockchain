@@ -92,7 +92,7 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
 	}
 
-	log.Printf("Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
+	log.Printf("<trnsaction.go> Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
 
 	return transaction, nil
 }
@@ -159,7 +159,7 @@ func NewTransferTransaction(
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
 	outs = append(outs, output1)
-	log.Printf("Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
+	log.Printf("<transaction.go> Пользователь адреса %v получает перевод %v\n", recipientAddress, amount)
 
 	// Если отправителю нужна сдача то добавляем  выход со сдачей
 	output2, err := NewTransactionOutput(totalInputValue-amount, senderAddress, hc)
@@ -167,7 +167,7 @@ func NewTransferTransaction(
 		return nil, fmt.Errorf("Output create error: %v", err)
 	}
 	outs = append(outs, output2)
-	log.Printf("Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
+	log.Printf("<transaction.go> Пользователь адреса %v получает сдачу %v\n", senderAddress, totalInputValue-amount)
 
 	// Создание структуры транзакции и подсчет хэша
 	transaction := &Transaction{
