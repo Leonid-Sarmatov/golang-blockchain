@@ -105,44 +105,6 @@ func (bc *Blockchain) LoadSavedBlockchain() error {
 	return nil
 }
 
-/*func NewBlockchain(storage BlockchainStorage, hc hashCalulator) (*Blockchain, error) {
-	// Подготавливаем структуру
-	blockchain := &Blockchain{
-		Storage:  storage,
-		HachCalc: hc,
-	}
-
-	log.Println("Приступаю к инициализации...")
-
-	// Проверяем создан ли блокчейн на диске
-	ok, err := storage.IsBlockchainExist()
-	if err != nil {
-		return nil, fmt.Errorf("Check exist blockchain was failed: %v", err)
-	}
-
-	if !ok {
-		fmt.Println("Блокчейн не создан! Приступаю к созданию...")
-		// Если нет, то создаем генезис блок
-		g := block.NewGenesisBlock(hc)
-		err = storage.MakeNewBlockchain(g)
-		if err != nil {
-			return nil, fmt.Errorf("Create genesis block was failed: %v", err)
-		}
-	}
-	log.Println("Загружаю кончик...")
-
-	// Загружаем кончик генезис блока
-	tip, err := storage.BlockchainGetTip()
-	if err != nil {
-		return nil, fmt.Errorf("Can not init blockchain tip: %v", err)
-	}
-	blockchain.TipHash = tip
-
-	log.Printf("Значение кончика получено: %v\n", tip)
-
-	return blockchain, nil
-}*/
-
 func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
 	if bytes.Compare(b.PrevBlockHash, bc.TipHash) != 0 {
 		log.Printf("<blockchain.go> Хэши не совпали, блок не сохранен! Значение кончика %x, а в блоке записан %x", bc.TipHash, b.PrevBlockHash)
@@ -168,24 +130,18 @@ func (bc *Blockchain) AddBlockToBlockchain(b *block.Block) error {
 	return nil
 }
 
+/*
+IsAlreadyExistBlock сравнивает хеш блока с хешом кончика
+
+Аргументы:
+  - b *block.Block: указатель на блок
+
+Возвращает:
+  - bool: true - совпадает, false - не совпадает
+*/
 func (bc *Blockchain) IsAlreadyExistBlock(b *block.Block) bool {
 	return bytes.Compare(b.Hash, bc.TipHash) == 0
 }
-
-// func (bc *Blockchain) CreateNewBlock(data []byte) (*block.Block, error) {
-// 	// Получаем кончик блокчейна
-// 	tip, err := bc.Storage.BlockchainGetTip()
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Can not get blockchain tip: %v", err)
-// 	}
-
-// 	newBlock, err := block.NewBlock(data, tip)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("Creating new block to blockchain was failed: %v", err)
-// 	}
-
-// 	return newBlock, nil
-// }
 
 /*
 =======================================================

@@ -7,10 +7,10 @@ import (
 )
 
 type blockchain interface {
-	/* Загрузка блокчейна из сети */
-	TryLoadSavedBlockchain() (bool, error)
 	/* Загрузка блокчейна из локального хранилища */
-	TryNetworkLoadBlockchain() (bool, error)
+	TryLoadSavedBlockchain() (error)
+	/* Загрузка блокчейна из сети */	
+	//TryNetworkLoadBlockchain() (error)
 	/* Запуск процесса сохранения блока из канала */
 	BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan error
 	/* Запуск процесса отброса существующих блоков */

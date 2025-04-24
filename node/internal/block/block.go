@@ -150,7 +150,7 @@ func NewGenesisBlock(hc HashCalculator) *Block {
 	hash := hc.HashCalculate([]byte("Genesis block!"))
 	log.Printf("Genesis block was successful, hash:\n%x\n", hash)
 	return &Block{
-		TimeOfCreation:   time.Now().Unix(),
+		TimeOfCreation:   0,
 		Data:             []byte("Genesis block!"),//Genesis block!
 		PrevBlockHash:    []byte{},
 		Hash:             hash,
