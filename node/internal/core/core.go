@@ -2,17 +2,18 @@ package core
 
 import (
 	"context"
+	"log"
 	"node/internal/block"
 	"node/internal/transaction"
 )
 
 type blockchain interface {
 	/* Загрузка блокчейна из локального хранилища */
-	TryLoadSavedBlockchain() (error)
-	/* Загрузка блокчейна из сети */	
+	TryLoadSavedBlockchain() error
+	/* Загрузка блокчейна из сети */
 	//TryNetworkLoadBlockchain() (error)
 	/* Запуск процесса сохранения блока из канала */
-	BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan error
+	BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan *block.Block
 	/* Запуск процесса отброса существующих блоков */
 	AlreadyExistBlockFilter(ctx context.Context, input <-chan *block.Block) chan *block.Block
 }
@@ -24,7 +25,7 @@ type transactionReceiver interface {
 
 type blockTransmitter interface {
 	/* Запуск процесса отправки созданных блоков в сеть */
-	BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, id string) chan error
+	BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, id string)
 }
 
 type blockReceiver interface {
@@ -100,14 +101,19 @@ func (core *Core) Init() error {
 	blFilterChan := core.blockchain.AlreadyExistBlockFilter(context.Background(), blRecChan)
 
 	// Разделение канала с блоками, первый для сохранения блоков, остальные для работы майнинга
-	blSaveChan := make(chan *block.Block)
+	selfSaveChan := make(chan *block.Block)
 	cancelMining := make(chan int)
 	startMining := make(chan int)
 	go func() {
-		for blk := range blFilterChan {
-			blSaveChan <- blk
-			cancelMining <- 1
-			startMining <- 1
+		for {
+			select {
+			case blk := <-blFilterChan:
+				log.Printf("1 > ")
+				selfSaveChan <- blk
+				log.Printf("1 >> ")
+				cancelMining <- 1
+				log.Printf("1 >>> ")
+			}
 		}
 	}()
 
@@ -115,13 +121,13 @@ func (core *Core) Init() error {
 	packetsChan := core.miner.TransactionListnerProcess(context.Background(), tranRecChan, startMining)
 
 	// Запуск процесса майнинга блоков
-	resBlChan := core.miner.MiningProcess(context.Background(), packetsChan, cancelMining)
-
-	// Запуск процесса отправки блоков в сеть
-	core.blockTransmitter.BlockTransmitterProcess(context.Background(), resBlChan, "blocks1")
+	minerBlkChan := core.miner.MiningProcess(context.Background(), packetsChan, cancelMining)
 
 	// Запуск процесса сохранения блоков на диск
-	core.BlockSaveProcess(context.Background(), blSaveChan)
+	networkSendBlkChan := core.blockchain.BlockSaveProcess(context.Background(), minerBlkChan)
+
+	// Запуск процесса отправки блоков в сеть
+	core.blockTransmitter.BlockTransmitterProcess(context.Background(), networkSendBlkChan, "blocks1")
 
 	return nil
 }

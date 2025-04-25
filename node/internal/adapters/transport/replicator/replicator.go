@@ -240,9 +240,9 @@ BlockTransmitter создает процесс для отправки
 Возвращает:
   - chan erro: канал возникающих ошибок
 */
-func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) chan error {
+func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) {
 	// Канал с ошибками
-	outputs := make(chan error)
+	//outputs := make(chan error)
 
 	// Фоновый процесс отправки блоков в сеть
 	go func() {
@@ -253,17 +253,17 @@ func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-ch
 				msg, err := blk.SerializeBlock()
 				if err != nil {
 					log.Printf("<replication.go> Ошибка отправки блока в сеть: %v", err)
-					outputs <- err
+					//outputs <- err
 					continue
 				}
 				r.RedisClient.Publish(context.Background(), blockSubName, string(msg))
 			case <-ctx.Done():
 				// Корректное завершение работы
-				close(outputs)
+				//close(outputs)
 				return
 			}
 		}
 	}()
 
-	return outputs
+	//return outputs
 }

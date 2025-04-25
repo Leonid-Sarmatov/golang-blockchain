@@ -92,7 +92,7 @@ func NewCoinbaseTransaction(reward int, address, key []byte, hc hashCalulator, p
 		return nil, fmt.Errorf("Can not add output to pool: %v", err)
 	}
 
-	log.Printf("<trnsaction.go> Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", output.RecipientAddress, output.Value)
+	log.Printf("<trnsaction.go> Новый коин-базис успешно создан! Адрес: %v, Балланс: %v\n", string(output.RecipientAddress), output.Value)
 
 	return transaction, nil
 }

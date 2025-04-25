@@ -2,7 +2,9 @@ package pow
 
 import (
 	"crypto/sha256"
+	"log"
 	"node/internal/block"
+
 	//"log"
 	"fmt"
 	"math/big"
@@ -113,6 +115,7 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, 
 
 		// Вычисляем хэш блока
 		hash = [32]byte(solver.HashCalculate(bytes))
+		blk.Hash = hash[:]
 		hashInt.SetBytes(hash[:])
 
 		// Проверяем, удовлетворяет ли хэш целевому значению
@@ -125,11 +128,14 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, 
 		// Отмена подсвета POW
 		select {
 		case <-cancel:
+			log.Printf("<pow.go> Отмена подсчета proof-of-work!")
 			return -1, nil
 		default:
 			continue
 		}
 	}
+
+
 
 	// log.Printf("Counter result value: %v\n", counter)
 	// fmt.Printf("Хэш блока: %x\n", hash)

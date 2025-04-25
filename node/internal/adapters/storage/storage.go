@@ -186,7 +186,7 @@ func (driver *BBoltDBDriver) WriteNewBlock(newBlock *block.Block, lastHash []byt
 			return fmt.Errorf("Can not write hash from block: %v", err)
 		}
 
-		driver.Iterator()
+		//driver.Iterator()
 
 		return nil
 	})

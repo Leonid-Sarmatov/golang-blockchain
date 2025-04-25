@@ -51,9 +51,9 @@ type blockchainStorage interface {
 */
 type Blockchain struct {
 	/* Хранилище блокчейна на диске */
-	storage  blockchainStorage
+	storage blockchainStorage
 	/* Хэш последнего блока (кончик блокчейна) */
-	tip  []byte
+	tip []byte
 	/* Калькулятор хэшей */
 	hc hashCalulator
 }
@@ -64,8 +64,8 @@ NewBlockchainAdapter конструктор блокчейна
 func NewBlockchain(s blockchainStorage, hc hashCalulator) *Blockchain {
 	return &Blockchain{
 		storage: s,
-		hc: hc,
-}
+		hc:      hc,
+	}
 }
 
 /*
@@ -118,7 +118,7 @@ AddBlockToBlockchain пробует добавить новый блок
 func (blockchain *Blockchain) AddBlockToBlockchain(b *block.Block) error {
 	if bytes.Compare(b.PrevBlockHash, blockchain.tip) != 0 {
 		log.Printf(
-			"<blockchain.go> Хэши не совпали, блок не сохранен! Значение кончика %x, а в блоке записан %x",  
+			"<blockchain.go> Хэши не совпали, блок не сохранен! Значение кончика %x, а в блоке записан %x",
 			blockchain.tip, b.PrevBlockHash,
 		)
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", "prev-block-hach not equal tip-hash")
@@ -137,6 +137,7 @@ func (blockchain *Blockchain) AddBlockToBlockchain(b *block.Block) error {
 		log.Printf("<blockchain.go> Не удалось сохранить блок: %v", err)
 		return fmt.Errorf("Saving new block to blockchain was failed: %v", err)
 	}
+	blockchain.tip = b.Hash
 
 	log.Printf("<blockchain.go> Новый блок в блокчейн успешно добавлен! Хеш последнего блока: %x\n", b.Hash)
 
@@ -153,6 +154,7 @@ IsAlreadyExistBlock сравнивает хеш блока с хешом кон�
   - bool: true - совпадает, false - не совпадает
 */
 func (blockchain *Blockchain) IsAlreadyExistBlock(b *block.Block) bool {
+	log.Printf("Хэш кончика = %x,   Хэш текущего блока = %x,   Хэш предыдущего блока = %x", blockchain.tip, b.Hash, b.PrevBlockHash)
 	return bytes.Compare(b.Hash, blockchain.tip) == 0
 }
 
@@ -195,8 +197,8 @@ BlockSaveProcess принимает канал с блоками и сохран
 Возвращает:
   - chan error: ошибки
 */
-func (blockchain *Blockchain) BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan error {
-	output := make(chan error)
+func (blockchain *Blockchain) BlockSaveProcess(ctx context.Context, input <-chan *block.Block) chan *block.Block {
+	output := make(chan *block.Block)
 
 	// Фоновый процесс чтения и записи блоков
 	go func() {
@@ -208,12 +210,14 @@ func (blockchain *Blockchain) BlockSaveProcess(ctx context.Context, input <-chan
 				err := blockchain.AddBlockToBlockchain(blk)
 				if err != nil {
 					log.Printf("<blockchain_adapter.go> Ошибка сохранения блока на диск: %v", err)
-					output <- fmt.Errorf("Can not add block: %v", err)
+					continue
+					//output <- fmt.Errorf("Can not add block: %v", err)
 				}
 				log.Printf("<blockchain_adapter.go> Блок успешно записан в блокчейн на диске")
+				output <- blk
 			case <-ctx.Done():
 				// Корректное завершение функции
-				close(output)
+				//close(output)
 				return
 			}
 		}
@@ -283,7 +287,7 @@ func (blockchain *Blockchain) GetBalance(address []byte) (int32, error) {
 			for _, in := range t.Inputs {
 				inputs[string(in.PreviousOutputHash)] = struct{}{}
 			}
-	
+
 			// Отсев соединений вход-выход
 			for _, out := range t.Outputs {
 				if _, ok := inputs[string(out.Hash)]; !ok {
@@ -295,7 +299,7 @@ func (blockchain *Blockchain) GetBalance(address []byte) (int32, error) {
 					delete(inputs, string(out.Hash))
 				}
 			}
-			
+
 		},
 	)
 
@@ -330,7 +334,7 @@ func (blockchain *Blockchain) GetFreeTransactionsOutputs() ([]*transaction.Trans
 			for _, in := range t.Inputs {
 				inputs[string(in.PreviousOutputHash)] = struct{}{}
 			}
-	
+
 			// Отсев соединений вход-выход
 			for _, out := range t.Outputs {
 				if _, ok := inputs[string(out.Hash)]; !ok {
@@ -342,7 +346,7 @@ func (blockchain *Blockchain) GetFreeTransactionsOutputs() ([]*transaction.Trans
 					delete(inputs, string(out.Hash))
 				}
 			}
-			
+
 		},
 	)
 
@@ -387,10 +391,10 @@ func (blockchain *Blockchain) TransactionIterator(f func(*transaction.Transactio
 		}
 
 		// Инверсное итерирование по транзакциям c применением функции к каждой транзакции
-		for i := len(transactions)-1; i >= 0; i -= 1 {
+		for i := len(transactions) - 1; i >= 0; i -= 1 {
 			f(transactions[i])
 		}
-		
+
 		// Переход к следующему блоку
 		iter.Next()
 	}

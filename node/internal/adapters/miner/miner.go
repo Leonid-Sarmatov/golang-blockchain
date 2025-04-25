@@ -219,9 +219,10 @@ func (miner *Miner) MiningProcess(
 					log.Printf("<miner.go> Ошибка при подсчете proof-of-work! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
-				log.Printf("<miner.go> Для сформированного блока успешно посчитан proof-of-work!")
+				log.Printf("<miner.go> Для сформированного блока успешно посчитан proof-of-work: %v", pow)
 
 				if pow >= 0 {
+					// Задаем POW блоку и отправляем на сохранение
 					blk.ProofOfWorkValue = pow
 					blks <- blk
 					log.Printf("<miner.go> Блок успешно создан. Ожидает запись и отправку в сеть")
