@@ -154,7 +154,7 @@ IsAlreadyExistBlock сравнивает хеш блока с хешом кон�
   - bool: true - совпадает, false - не совпадает
 */
 func (blockchain *Blockchain) IsAlreadyExistBlock(b *block.Block) bool {
-	log.Printf("Хэш кончика = %x,   Хэш текущего блока = %x,   Хэш предыдущего блока = %x", blockchain.tip, b.Hash, b.PrevBlockHash)
+	//log.Printf("Хэш кончика = %x,   Хэш текущего блока = %x,   Хэш предыдущего блока = %x", blockchain.tip, b.Hash, b.PrevBlockHash)
 	return bytes.Compare(b.Hash, blockchain.tip) == 0
 }
 
@@ -187,6 +187,44 @@ TryNetworkLoadBlockchain попытка загрузить блокчейн из
 }*/
 
 /*
+AlreadyExistBlockFilter сравнивает хэш приходящего
+блока, и последнего блока в блокчейне, если они совпали,
+значит пришедший по сети блок был только что создан самим узлом
+
+Аргументы:
+  - ctx context.Context: контекст для корректной остановки работы
+  - input <-chan *block.Block: поступающие блоки
+
+Возвращает:
+  - chan *block.Block: отфильтрованные блоки
+*/
+func (blockchain *Blockchain) AlreadyExistBlockFilter(ctx context.Context, input <-chan *block.Block) chan *block.Block {
+	output := make(chan *block.Block)
+
+	go func() {
+		for {
+			select {
+			case blk := <-input:
+				log.Printf("<blockchain.go> Блок пришел на фильтрацию")
+				// Проверка по хэшу, был ли этот блок записан только что
+				if blockchain.IsAlreadyExistBlock(blk) {
+					log.Printf("<blockchain.go> Этот блок был только что сохранент, фильтр не пройден")
+					continue
+				}
+				log.Printf("<blockchain.go> Фильтр пройден, отправка блока для сохранение на диск")
+				output <- blk
+			case <-ctx.Done():
+				// Корректное завершение функции
+				close(output)
+				return
+			}
+		}
+	}()
+
+	return output
+}
+
+/*
 BlockSaveProcess принимает канал с блоками и сохраняет
 все приходящие блоки, ошибки записи поступают в выходной кана
 
@@ -209,49 +247,10 @@ func (blockchain *Blockchain) BlockSaveProcess(ctx context.Context, input <-chan
 				// Чтение канала с блоками и запись блока на диск
 				err := blockchain.AddBlockToBlockchain(blk)
 				if err != nil {
-					log.Printf("<blockchain_adapter.go> Ошибка сохранения блока на диск: %v", err)
-					continue
-					//output <- fmt.Errorf("Can not add block: %v", err)
-				}
-				log.Printf("<blockchain_adapter.go> Блок успешно записан в блокчейн на диске")
-				output <- blk
-			case <-ctx.Done():
-				// Корректное завершение функции
-				//close(output)
-				return
-			}
-		}
-	}()
-
-	return output
-}
-
-/*
-AlreadyExistBlockFilter сравнивает хэш приходящего
-блока, и последнего блока в блокчейне, если они совпали,
-значит пришедший по сети блок был только что создан самим узлом
-
-Аргументы:
-  - ctx context.Context: контекст для корректной остановки работы
-  - input <-chan *block.Block: поступающие блоки
-
-Возвращает:
-  - chan *block.Block: отфильтрованные блоки
-*/
-func (blockchain *Blockchain) AlreadyExistBlockFilter(ctx context.Context, input <-chan *block.Block) chan *block.Block {
-	output := make(chan *block.Block)
-
-	go func() {
-		for {
-			select {
-			case blk := <-input:
-				log.Printf("<blockchain_adapter.go> Получен блок, сравнение с последним блоком в блокчейне")
-				// Проверка по хэшу, был ли этот блок записан только что
-				if blockchain.IsAlreadyExistBlock(blk) {
-					log.Printf("<blockchain_adapter.go> Блок только что был записан, игнорирование блока")
+					log.Printf("<blockchain.go> Ошибка сохранения блока на диск: %v", err)
 					continue
 				}
-				log.Printf("<blockchain_adapter.go> Фильтр пройден, блок прошущен дальше")
+				log.Printf("<blockchain.go> Блок успешно записан в блокчейн на диске, отправка блока в сеть")
 				output <- blk
 			case <-ctx.Done():
 				// Корректное завершение функции

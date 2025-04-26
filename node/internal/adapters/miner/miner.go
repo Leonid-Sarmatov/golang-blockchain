@@ -14,7 +14,7 @@ type powChecker interface {
 
 type powSolver interface {
 	/* Функция поиска доказательства работы с возможностью отмены */
-	Exec(blk *block.Block, cancel <-chan int) (int, error)
+	Exec(blk *block.Block, cancel <-chan interface{}) error
 }
 
 type blockchainStorage interface {
@@ -78,7 +78,6 @@ TransactionListnerProcess создает процесс обработки пр�
 func (miner *Miner) TransactionListnerProcess(
 	ctx context.Context,
 	inputTransactions <-chan *transaction.Transaction,
-	startMining <-chan int,
 ) chan []*transaction.Transaction {
 	// Канал пакетом транзакций для будущего блока
 	trnsCh := make(chan []*transaction.Transaction)
@@ -95,7 +94,7 @@ func (miner *Miner) TransactionListnerProcess(
 					miner.calc, miner.pool,
 				)
 				if err != nil {
-					log.Printf("<miner.go> Не удалось создать транзакцию аознаграждения майнера")
+					log.Printf("<miner.go> Не удалось создать транзакцию вознаграждения майнера")
 					continue
 				}
 				// Отправка транзакции от мем-пулла и транзакции вознаграждения на майнинг
@@ -111,59 +110,6 @@ func (miner *Miner) TransactionListnerProcess(
 
 	return trnsCh
 }
-/*func (miner *Miner) TransactionListnerProcess(
-	ctx context.Context,
-	inputTransactions <-chan *transaction.Transaction,
-	startMining <-chan int,
-) chan []*transaction.Transaction {
-	// Канал пакетом транзакций для будущего блока
-	trnsCh := make(chan []*transaction.Transaction)
-
-	// Фоновый процесс получения транзакций и отправки их на майнинг
-	go func() {
-		// Пакет транзакций
-		trns := make([]*transaction.Transaction, 0)
-		for {
-			select {
-			case <-startMining:
-				// Не формируем пакет, если транзакций нет вообще
-				if len(trns) == 0 {
-					continue
-				}
-				// Копируем пакет транзакций в буфер, отправляем буфер на майнинг, и сбрасываем пакет
-				buffer := make([]*transaction.Transaction, len(trns))
-				copy(buffer, trns)
-				trnsCh <- buffer
-				trns = nil
-				log.Printf("<miner.go> Пришел сигнал на начало майнинга: пакет транзакций отправлен на обработку")
-			case trn := <-inputTransactions:
-				log.Printf("<miner.go> Пришла транзакция...")
-				// Если nil то переинициализируем
-				if trns == nil {
-					log.Printf("<miner.go> Пакет был нулевым, инициализация пакета (массива транзакций)")
-					trns = make([]*transaction.Transaction, 0)
-				}
-				// Аккумулируем транзакции в пакет
-				log.Printf("<miner.go> Сохранение транзакции в пакет (массив транзакций)")
-				trns = append(trns, trn)
-				// Если накопилось слишком много транзакций, начинаем майнить
-				if len(trns) >= 1 {
-					log.Printf("<miner.go> Транзакций накопилось слишком много: майнинг без сигнала")
-					// Копируем пакет транзакций в буфер, отправляем буфер на майнинг, и сбрасываем пакет
-					buffer := make([]*transaction.Transaction, len(trns))
-					copy(buffer, trns)
-					trnsCh <- buffer
-					trns = nil
-				}
-			case <-ctx.Done():
-				// Обработка корректного завершения
-				return
-			}
-		}
-	}()
-
-	return trnsCh
-}*/
 
 /*
 MiningProcess создает процесс создания, майнинга нового блока
@@ -178,9 +124,9 @@ MiningProcess создает процесс создания, майнинга �
   - chan *block.Block: канал с блоками на отправку в сеть
 */
 func (miner *Miner) MiningProcess(
-	ctx context.Context,
-	transactionPackets <-chan []*transaction.Transaction,
-	cancelMining <-chan int,
+	ctx context.Context, 
+	inputTransactions <-chan *transaction.Transaction, 
+	inputBlock <-chan *block.Block,
 ) chan *block.Block {
 	// Канал с блоками на отправку в сеть
 	blks := make(chan *block.Block)
@@ -189,8 +135,21 @@ func (miner *Miner) MiningProcess(
 	go func() {
 		for {
 			select {
-			case pac := <-transactionPackets:
-				log.Printf("<miner.go> Получен пакет транзакций для майнига блока")
+			case trn := <-inputTransactions:
+				log.Printf("<miner.go> Пришла транзакция...")
+				// Создание базисной транзакции для вознаграждения данного майнера
+				trnR, err := transaction.NewCoinbaseTransaction(
+					1, []byte("Miner"), []byte("Miner"), 
+					miner.calc, miner.pool,
+				)
+				if err != nil {
+					log.Printf("<miner.go> Не удалось создать транзакцию вознаграждения майнера! Майнинг отменен. Ошибка: %v", err)
+					continue
+				}
+
+				// Формирование пакета транзакций
+				pac := []*transaction.Transaction{trn, trnR}
+				
 				// Получение кончика блокчейна, который станет предудущим хэшом формируемого блока
 				tip, err := miner.Storage.BlockchainGetTip()
 				if err != nil {
@@ -207,6 +166,7 @@ func (miner *Miner) MiningProcess(
 				}
 				log.Printf("<miner.go> Транзакции успешно сериализованы в байтовый слайс!")
 
+				// Конструктур блока
 				blk, err := block.NewBlock(slice, tip)
 				if err != nil {
 					log.Printf("<miner.go> Не удалось сформировать новый блок! Майнинг отменен. Ошибка: %v", err)
@@ -214,16 +174,26 @@ func (miner *Miner) MiningProcess(
 				}
 				log.Printf("<miner.go> Сформирован блок с транзакциями!")
 
-				pow, err := miner.solver.Exec(blk, cancelMining)
+				// Фоновый процесс отмены майнинга
+				cancel := make(chan interface{})
+				defer close(cancel)
+				go func () {
+					for b := range inputBlock {
+						if b.TimeOfCreation < blk.TimeOfCreation {
+							cancel <- struct{}{}
+						}
+					}
+				}()
+
+				err = miner.solver.Exec(blk, cancel)
 				if err != nil {
 					log.Printf("<miner.go> Ошибка при подсчете proof-of-work! Майнинг отменен. Ошибка: %v", err)
 					continue
 				}
-				log.Printf("<miner.go> Для сформированного блока успешно посчитан proof-of-work: %v", pow)
+				log.Printf("<miner.go> Для сформированного блока успешно посчитан proof-of-work")
 
-				if pow >= 0 {
+				if blk.ProofOfWorkValue >= 0 {
 					// Задаем POW блоку и отправляем на сохранение
-					blk.ProofOfWorkValue = pow
 					blks <- blk
 					log.Printf("<miner.go> Блок успешно создан. Ожидает запись и отправку в сеть")
 				} else {

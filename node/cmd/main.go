@@ -79,12 +79,8 @@ func main() {
 		log.Fatalf("Не удалось инициализировать майнер: %v", err)
 	}
 
-	c := core.NewCore(r, r, r, b, m)
+	c := core.NewCore(r, r, r, b, m, checker, hc)
 	c.Init()
-
-	for {
-		
-	}
 
 	for {
 		

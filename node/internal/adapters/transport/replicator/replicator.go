@@ -14,8 +14,8 @@ import (
 )
 
 type RedisReplicator struct {
-	ctx context.Context
-	mu *sync.Mutex
+	ctx         context.Context
+	mu          *sync.Mutex
 	RedisClient *redis.Client
 }
 
@@ -64,16 +64,14 @@ func (r *RedisReplicator) AddOutput(out transaction.TransactionOutput) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	//for _, out := range outs {
-		outBytes, err := transaction.SerializeTransactionOutput(&out)
-		if err != nil {
-			return err
-		}
+	outBytes, err := transaction.SerializeTransactionOutput(&out)
+	if err != nil {
+		return err
+	}
 
-		if err := r.RedisClient.Set(r.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
-			return err
-		}
-	//}
+	if err := r.RedisClient.Set(r.ctx, string(out.Hash), outBytes, 0).Err(); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -82,16 +80,9 @@ func (r *RedisReplicator) BlockOutput(out transaction.TransactionOutput) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	//for _, out := range outs {
-	// outBytes, err := transaction.SerializeTransactionOutput(&out)
-	// if err != nil {
-	// 	return err
-	// }
-
 	if err := r.RedisClient.Del(r.ctx, string(out.Hash)).Err(); err != nil {
 		return err
 	}
-	//}
 
 	return nil
 }
@@ -126,10 +117,7 @@ func (r *RedisReplicator) GetAllUnlockOutputs() ([]*transaction.TransactionOutpu
 		if err != nil {
 			return nil, fmt.Errorf("Deserialization was failed: %v", err)
 		}
-		// fmt.Printf("tr.Hash = %x\n", tr.Hash)
-		// fmt.Printf("tr.RecipientAddress = %v\n", string(tr.RecipientAddress))
-		// fmt.Printf("tr.TimeOfCreation = %v\n", tr.TimeOfCreation)
-		// fmt.Printf("tr.Value = %v\n", tr.Value)
+
 		result = append(result, tr)
 	}
 
@@ -166,19 +154,18 @@ func (r *RedisReplicator) TransactionReceiverProcess(transactionSubName string) 
 
 			// Чтение канала с сообщениями
 			for msg := range ch {
-				log.Printf("<replicator.go> От Redis пришло сообщение, распаковываю...")
 				buf := bytes.NewReader([]byte(msg.Payload))
 				tr, err := transaction.DeserializeTransaction(buf)
 				if err != nil {
 					log.Printf("Can not deserialization transaction: %v", err)
 					break
 				}
-				log.Printf("<replicator.go> Транзакция принята!")
+				log.Printf("<replicator.go> Пришла транзакция от mem-pool")
 				output <- &tr
 			}
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
-			log.Println("PubSub channel with transactions closed. Reconnecting...")
+			log.Println("<replicator.go> PubSub channel with transactions closed. Reconnecting...")
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -216,11 +203,12 @@ func (r *RedisReplicator) BlockReceiverProcess(blockSubName string) chan *block.
 					log.Printf("Can not deserialization block: %v", err)
 					break
 				}
+				log.Printf("<replicator.go> Пришел блок от сети. HASH = %x. POW = %v", blk.Hash, blk.ProofOfWorkValue)
 				output <- blk
 			}
 
 			// При возникновении ошибки или закрытии канала, ждем секунду перед переподключением
-			log.Println("PubSub channel with blocks closed. Reconnecting...")
+			log.Println("<replicator.go> PubSub channel with blocks closed. Reconnecting...")
 			time.Sleep(1 * time.Second)
 		}
 	}()
@@ -241,9 +229,6 @@ BlockTransmitter создает процесс для отправки
   - chan erro: канал возникающих ошибок
 */
 func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-chan *block.Block, blockSubName string) {
-	// Канал с ошибками
-	//outputs := make(chan error)
-
 	// Фоновый процесс отправки блоков в сеть
 	go func() {
 		for {
@@ -252,18 +237,15 @@ func (r *RedisReplicator) BlockTransmitterProcess(ctx context.Context, blks <-ch
 				// Отправка созданного данным узлом блока в сеть
 				msg, err := blk.SerializeBlock()
 				if err != nil {
-					log.Printf("<replication.go> Ошибка отправки блока в сеть: %v", err)
-					//outputs <- err
+					log.Printf("<replicator.go> Ошибка отправки блока в сеть: %v", err)
 					continue
 				}
+				log.Printf("<replicator.go> Блок отправляется в сеть. HASH = %x. POW = %v", blk.Hash, blk.ProofOfWorkValue)
+
 				r.RedisClient.Publish(context.Background(), blockSubName, string(msg))
 			case <-ctx.Done():
-				// Корректное завершение работы
-				//close(outputs)
 				return
 			}
 		}
 	}()
-
-	//return outputs
 }

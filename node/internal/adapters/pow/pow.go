@@ -15,9 +15,7 @@ const (
 	targetBits = 20
 )
 
-
-
-type hashCalculator struct {}
+type hashCalculator struct{}
 
 func NewHashCalculator() *hashCalculator {
 	return &hashCalculator{}
@@ -37,7 +35,7 @@ func NewProofOfWorkCheker() *proofOfWorkCheker {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 	return &proofOfWorkCheker{
-		target: target,
+		target:         target,
 		hashCalculator: *NewHashCalculator(),
 	}
 }
@@ -48,34 +46,25 @@ func (pow *proofOfWorkCheker) Check(block *block.Block) (bool, error) {
 	target.Lsh(target, uint(256-targetBits))
 
 	var hashInt big.Int
-	var hash [32]byte
 
-	data, err := block.SerializeBlock()
+	data, err := block.SerializeBlockWithoutHash()
 	if err != nil {
 		return false, err
 	}
 	// Вычисляем хэш блока
-	hash = [32]byte(pow.HashCalculate(data))
-	hashInt.SetBytes(hash[:])
+	hashInt.SetBytes(pow.HashCalculate(data))
 
-	// fmt.Printf("Хэш блока после установки POW: %x\n", hash)
-	// fmt.Printf("Хэш установленый в блоке: %x\n", block.Hash)
-	// fmt.Printf("Хэш предыдущего блока установленый в блоке: %x\n", block.PrevBlockHash)
-	// fmt.Printf("Доказательство работы установленое в блоке: %v\n", block.ProofOfWorkValue)
-	// fmt.Printf("Время создания блока установленое в блоке: %v\n", block.TimeOfCreation)
-	// fmt.Println()
+	log.Printf("<pow.go> Хэш в блоке: %x", block.Hash)
 
 	// Проверяем, удовлетворяет ли хэш целевому значению
 	if hashInt.Cmp(target) == -1 {
-		//log.Printf("Доказательство работы подтверждено. Значение: %v", block.ProofOfWorkValue)
+		log.Printf("<pow.go> Доказательство работы подтверждено. Значение: %v", block.ProofOfWorkValue)
 		return true, nil // Хэш подходит
 	} else {
-		//log.Printf("Доказательство работы не подтверждено. Значение: %v", block.ProofOfWorkValue)
+		log.Printf("<pow.go> Доказательство работы не подтверждено. Значение: %v", block.ProofOfWorkValue)
 		return false, nil // Хэш не подходит
 	}
 }
-
-
 
 type proofOfWorkSolver struct {
 	hashCalculator
@@ -87,40 +76,32 @@ func NewProofOfWorkSolver() *proofOfWorkSolver {
 	}
 }
 
-func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, error) {
+func (solver *proofOfWorkSolver) Exec(blk *block.Block, cancel <-chan interface{}) error {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
 
 	var hashInt big.Int
-	var hash [32]byte
 	counter := 0
-
-	//log.Printf("Mining the block containing: %x\n", data)
-
-	// block, err := block.DeserializeBlock(data)
-	// if err != nil {
-	// 	return -1, fmt.Errorf("Не смог десериализовать: %v", err)
-	// }
-
-	//fmt.Printf("Хэш блока до подсчета POW: %x\n", m.hachCalc.HashCalculate(data))
-	//fmt.Printf("Хэш блока до подсчета POW: %x\n", m.hachCalc.HashCalculate(s))
+	var hash []byte
 
 	for {
 		// Перебираем nonce до тех пор, пока не найдем подходящий хэш
 		blk.ProofOfWorkValue = counter // Устанавливаем текущее значение nonce
-		bytes, err := blk.SerializeBlock()
+		bytes, err := blk.SerializeBlockWithoutHash()
 		if err != nil {
-			return -1, fmt.Errorf("Can not calculate proof-of-work from block: %v", err)
+			return fmt.Errorf("Can not calculate proof-of-work from block: %v", err)
 		}
 
 		// Вычисляем хэш блока
-		hash = [32]byte(solver.HashCalculate(bytes))
-		blk.Hash = hash[:]
-		hashInt.SetBytes(hash[:])
+		hash = solver.HashCalculate(bytes)
+		hashInt.SetBytes(hash)
 
 		// Проверяем, удовлетворяет ли хэш целевому значению
 		if hashInt.Cmp(target) == -1 {
-			break // Хэш подходит, завершаем цикл
+			blk.Hash = hash
+			blk.ProofOfWorkValue = counter
+			log.Printf("<pow.go> HASH: %x,  POW: %v", blk.Hash, blk.ProofOfWorkValue)
+			return nil // Хэш подходит, завершаем цикл
 		} else {
 			counter++ // Увеличиваем nonce и продолжаем поиск
 		}
@@ -129,20 +110,9 @@ func (solver *proofOfWorkSolver)Exec(blk *block.Block, cancel <-chan int) (int, 
 		select {
 		case <-cancel:
 			log.Printf("<pow.go> Отмена подсчета proof-of-work!")
-			return -1, nil
+			return fmt.Errorf("Calculate POW was canceled")
 		default:
 			continue
 		}
 	}
-
-
-
-	// log.Printf("Counter result value: %v\n", counter)
-	// fmt.Printf("Хэш блока: %x\n", hash)
-	// fmt.Printf("Доказательство работы: %v\n", counter)
-	// fmt.Printf("Хэш установленый в блоке: %x\n", block.Hash)
-	// fmt.Printf("Хэш предыдущего блока установленый в блоке: %x\n", block.PrevBlockHash)
-	// fmt.Printf("Доказательство работы установленое в блоке: %v\n", block.ProofOfWorkValue)
-	// fmt.Printf("Время создания блока установленое в блоке: %v\n", block.TimeOfCreation)
-	return counter, nil
 }

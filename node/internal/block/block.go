@@ -25,6 +25,39 @@ type Block struct {
 	ProofOfWorkValue int
 }
 
+// Сериализация блока в байтовый слайс без учета хэша
+func (block *Block)SerializeBlockWithoutHash() ([]byte, error) {
+	buf := new(bytes.Buffer)
+
+	// Кодируем TimeOfCreation (int64)
+	if err := binary.Write(buf, binary.LittleEndian, block.TimeOfCreation); err != nil {
+		return nil, err
+	}
+
+	// Кодируем длину Data и сами данные
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(block.Data))); err != nil {
+		return nil, err
+	}
+	if _, err := buf.Write(block.Data); err != nil {
+		return nil, err
+	}
+
+	// Кодируем длину PrevBlockHash и сами данные
+	if err := binary.Write(buf, binary.LittleEndian, uint32(len(block.PrevBlockHash))); err != nil {
+		return nil, err
+	}
+	if _, err := buf.Write(block.PrevBlockHash); err != nil {
+		return nil, err
+	}
+
+	// Кодируем ProofOfWorkValue (int)
+	if err := binary.Write(buf, binary.LittleEndian, int32(block.ProofOfWorkValue)); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // Сериализация блока в байтовый слайс
 func (block *Block)SerializeBlock() ([]byte, error) {
 	buf := new(bytes.Buffer)
